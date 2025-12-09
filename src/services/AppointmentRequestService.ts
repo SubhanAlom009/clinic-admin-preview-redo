@@ -9,6 +9,7 @@ import {
   convertUTCToISTTime24,
   extractISTDateForInput,
 } from "../utils/timezoneUtils";
+import { WhatsAppService } from "./WhatsAppService";
 
 export interface AppointmentRequest {
   id: string;
@@ -170,7 +171,15 @@ export class AppointmentRequestService extends BaseService {
         .select(
           `
           *,
-          doctor_slot:doctor_slots(*)
+          doctor_slot:doctor_slots(*),
+          clinic_doctor:clinic_doctors(
+            id,
+            doctor_profile:doctor_profiles(
+              id,
+              full_name,
+              primary_specialization
+            )
+          )
         `
         )
         .eq("id", requestId)
@@ -186,6 +195,12 @@ export class AppointmentRequestService extends BaseService {
 
       // Type assertion for request object
       const requestData = request as any;
+
+      console.log("🔍 [DEBUG] Request data with doctor info:", {
+        hasDoctorInfo: !!requestData.clinic_doctor,
+        doctorProfile: requestData.clinic_doctor?.doctor_profile,
+        doctorName: requestData.clinic_doctor?.doctor_profile?.full_name,
+      });
 
       if (requestData.status !== "pending") {
         return {
@@ -551,12 +566,10 @@ export class AppointmentRequestService extends BaseService {
           normalizedSlotEnd: slotEnd,
           originalRequestedTime: requestedTimeString,
           normalizedRequestedTime: requestedTime,
-          comparison1: `${requestedTime} >= ${slotStart} = ${
-            requestedTime >= slotStart
-          }`,
-          comparison2: `${requestedTime} <= ${slotEnd} = ${
-            requestedTime <= slotEnd
-          }`,
+          comparison1: `${requestedTime} >= ${slotStart} = ${requestedTime >= slotStart
+            }`,
+          comparison2: `${requestedTime} <= ${slotEnd} = ${requestedTime <= slotEnd
+            }`,
           finalResult: isWithinSlot,
         });
 
@@ -619,8 +632,7 @@ export class AppointmentRequestService extends BaseService {
       if (totalBookings >= (requestedSlot as any).max_capacity) {
         return {
           error: new Error(
-            `Slot is at full capacity (${totalBookings}/${
-              (requestedSlot as any).max_capacity
+            `Slot is at full capacity (${totalBookings}/${(requestedSlot as any).max_capacity
             })`
           ),
           success: false,
@@ -652,7 +664,12 @@ export class AppointmentRequestService extends BaseService {
       }
 
       // Create the appointment using the requested datetime
-      const appointmentData = {
+      // Check if this is a video consultation
+      const isVideoConsultation = requestData.appointment_type
+        ?.toLowerCase()
+        .includes("video");
+
+      const appointmentData: any = {
         user_id: user.id,
         clinic_patient_id: clinicPatient!.id,
         clinic_doctor_id: requestData.doctor_id,
@@ -664,6 +681,15 @@ export class AppointmentRequestService extends BaseService {
         notes: requestData.notes || "",
         symptoms: requestData.symptoms || "",
       };
+
+      // Generate video_call_id for video consultations
+      if (isVideoConsultation) {
+        appointmentData.video_call_id = `consult-${requestData.doctor_id}-${Date.now()}`;
+        console.log(
+          "📹 Video consultation - generated call ID:",
+          appointmentData.video_call_id
+        );
+      }
 
       console.log("🔍 Appointment data being inserted:", appointmentData);
       console.log("🔍 Request data:", requestData);
@@ -713,6 +739,60 @@ export class AppointmentRequestService extends BaseService {
 
       // Sync the slot booking count after approval
       await this.syncSlotBookingCount((requestedSlot as any).id);
+
+      // Send WhatsApp confirmation to patient
+      if (requestData.patient_phone) {
+        try {
+          console.log(
+            "🔔 [CLINIC-ADMIN] Approval successful, preparing WhatsApp notification"
+          );
+
+          const appointmentTime = convertUTCToISTTime24(
+            requestData.requested_datetime
+          );
+
+          console.log("📅 [CLINIC-ADMIN] Appointment details for WhatsApp:", {
+            phone: requestData.patient_phone,
+            patientName: requestData.patient_name,
+            doctorName:
+              requestData.clinic_doctor?.doctor_profile?.full_name || "Doctor",
+            appointmentDate: requestedDateString,
+            appointmentTime: appointmentTime,
+          });
+
+          const result = await WhatsAppService.sendAppointmentConfirmed({
+            phone: requestData.patient_phone,
+            patientName: requestData.patient_name,
+            doctorName:
+              requestData.clinic_doctor?.doctor_profile?.full_name || "Doctor",
+            clinicName: "Clinic", // You can fetch clinic name if needed
+            appointmentDate: requestedDateString,
+            appointmentTime: appointmentTime,
+          });
+
+          if (result.success) {
+            console.log(
+              "✅ [CLINIC-ADMIN] WhatsApp confirmation sent successfully to:",
+              requestData.patient_phone
+            );
+          } else {
+            console.error(
+              "❌ [CLINIC-ADMIN] WhatsApp notification failed:",
+              result.error
+            );
+          }
+        } catch (whatsappError) {
+          console.error(
+            "❌ [CLINIC-ADMIN] WhatsApp notification exception:",
+            whatsappError
+          );
+          // Don't fail the approval if WhatsApp fails
+        }
+      } else {
+        console.warn(
+          "⚠️ [CLINIC-ADMIN] No patient phone number available for WhatsApp notification"
+        );
+      }
 
       return { success: true, data: null };
     } catch (error) {

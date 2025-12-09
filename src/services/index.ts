@@ -9,6 +9,7 @@ export { BillingService } from "./BillingService";
 export { PatientProfileService } from "./PatientProfileService";
 export { DoctorProfileService } from "./DoctorProfileService";
 export { ClinicProfileService } from "./ClinicProfileService";
+export { WhatsAppService } from "./WhatsAppService";
 
 export type {
   CreateAppointmentData,

@@ -8,6 +8,7 @@ import {
   Eye,
   AlertCircle,
   Stethoscope,
+  Video,
 } from "lucide-react";
 import { Button } from "./ui/Button";
 import { Input } from "./ui/Input";
@@ -288,6 +289,12 @@ export function AppointmentRequests({
                         {request.status.charAt(0).toUpperCase() +
                           request.status.slice(1)}
                       </span>
+                      {request.appointment_type?.toLowerCase().includes("video") && (
+                        <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium border bg-green-100 text-green-700 border-green-200">
+                          <Video className="h-3 w-3" />
+                          Video
+                        </span>
+                      )}
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-sm text-gray-600">
@@ -429,13 +436,12 @@ export function AppointmentRequests({
                   <p>
                     <span className="font-medium">Priority:</span>
                     <span
-                      className={`ml-1 px-2 py-1 rounded text-xs ${
-                        selectedRequest.priority === "urgent"
+                      className={`ml-1 px-2 py-1 rounded text-xs ${selectedRequest.priority === "urgent"
                           ? "bg-red-100 text-red-800"
                           : selectedRequest.priority === "high"
-                          ? "bg-orange-100 text-orange-800"
-                          : "bg-blue-100 text-blue-800"
-                      }`}
+                            ? "bg-orange-100 text-orange-800"
+                            : "bg-blue-100 text-blue-800"
+                        }`}
                     >
                       {selectedRequest.priority.charAt(0).toUpperCase() +
                         selectedRequest.priority.slice(1)}

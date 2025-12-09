@@ -8,6 +8,11 @@ import { BaseService, ServiceResponse } from "./BaseService";
 import { AppointmentStatus, ERROR_MESSAGES } from "../constants";
 import { Database } from "../types/database";
 import { ClinicProfileService } from "./ClinicProfileService";
+import { WhatsAppService } from "./WhatsAppService";
+import {
+  convertUTCToISTTime24,
+  extractISTDateForInput,
+} from "../utils/timezoneUtils";
 
 export type AppointmentWithRelations = {
   id: string;
@@ -618,14 +623,19 @@ export class AppointmentService extends BaseService {
     try {
       const user = await this.getCurrentUser();
 
-      // Get appointment details before deletion to check ownership
+      // Get appointment details before deletion to check ownership AND for WhatsApp notification
       const { data: appointment } = await supabase
         .from("appointments")
         .select(
           `
-          clinic_doctor_id,
-          service_day,
-          clinic_doctor:clinic_doctors!clinic_doctor_id(clinic_id)
+          *,
+          clinic_doctor:clinic_doctors!clinic_doctor_id(clinic_id),
+          clinic_patient:clinic_patients!clinic_patient_id(
+            patient_profile:patient_profiles(full_name, phone)
+          ),
+          doctor_details:clinic_doctors!clinic_doctor_id(
+            doctor_profile:doctor_profiles(full_name)
+          )
         `
         )
         .eq("id", id)
@@ -642,6 +652,14 @@ export class AppointmentService extends BaseService {
         throw new Error("You don't have permission to delete this appointment");
       }
 
+      // Extract patient info for WhatsApp before deletion
+      const patientPhone = (appointment as any)?.clinic_patient?.patient_profile
+        ?.phone;
+      const patientName =
+        (appointment as any)?.clinic_patient?.patient_profile?.full_name ||
+        "Patient";
+      const appointmentDatetime = (appointment as any)?.appointment_datetime;
+
       // Get slot_id before deletion for sync
       const slotId = (appointment as any)?.doctor_slot_id;
 
@@ -655,6 +673,26 @@ export class AppointmentService extends BaseService {
       // Sync slot booking count after deletion
       if (slotId) {
         await this.syncSlotBookingCount(slotId);
+      }
+
+      // Send WhatsApp cancellation notification
+      if (patientPhone && appointmentDatetime) {
+        try {
+          const appointmentDate = extractISTDateForInput(appointmentDatetime);
+          const appointmentTime = convertUTCToISTTime24(appointmentDatetime);
+
+          await WhatsAppService.sendAppointmentCancelled({
+            phone: patientPhone,
+            patientName: patientName,
+            appointmentDate: appointmentDate,
+            appointmentTime: appointmentTime,
+          });
+
+          console.log("✅ WhatsApp cancellation sent to:", patientPhone);
+        } catch (whatsappError) {
+          console.error("WhatsApp notification failed:", whatsappError);
+          // Don't fail the deletion if WhatsApp fails
+        }
       }
 
       // Queue recalculation is handled automatically by database trigger

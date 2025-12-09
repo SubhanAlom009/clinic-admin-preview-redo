@@ -22,6 +22,7 @@ import { Billing } from "./pages/Billing";
 import { Reports } from "./pages/Reports";
 import { Settings } from "./pages/Settings";
 import { History } from "./pages/History";
+import { VideoRoomPage } from "./pages/VideoRoomPage";
 import { Toaster } from "./components/ui/sonner";
 
 const queryClient = new QueryClient({
@@ -40,6 +41,15 @@ function App() {
         <Routes>
           <Route path="/" element={<Landing />} />
           <Route path="/auth" element={<Auth />} />
+          {/* Video room - outside Layout for fullscreen */}
+          <Route
+            path="/admin/video-room"
+            element={
+              <ProtectedRoute>
+                <VideoRoomPage />
+              </ProtectedRoute>
+            }
+          />
           <Route
             path="/admin/*"
             element={

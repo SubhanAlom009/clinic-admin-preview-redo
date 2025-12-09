@@ -11,6 +11,8 @@ import {
   User,
   Eye,
   Edit3,
+  Video,
+  Link2,
 } from "lucide-react";
 import { Button } from "../components/ui/Button";
 import { Input } from "../components/ui/Input";
@@ -197,11 +199,10 @@ export function Appointments() {
           <div className="flex border-b">
             <button
               onClick={() => setActiveTab("appointments")}
-              className={`px-6 py-4 text-sm font-medium border-b-2 transition-colors ${
-                activeTab === "appointments"
-                  ? "border-blue-500 text-blue-600 bg-blue-50"
-                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-              }`}
+              className={`px-6 py-4 text-sm font-medium border-b-2 transition-colors ${activeTab === "appointments"
+                ? "border-blue-500 text-blue-600 bg-blue-50"
+                : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                }`}
             >
               <div className="flex items-center space-x-2">
                 <CalendarDays className="h-4 w-4" />
@@ -210,11 +211,10 @@ export function Appointments() {
             </button>
             <button
               onClick={() => setActiveTab("queue")}
-              className={`px-6 py-4 text-sm font-medium border-b-2 transition-colors ${
-                activeTab === "queue"
-                  ? "border-blue-500 text-blue-600 bg-blue-50"
-                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-              }`}
+              className={`px-6 py-4 text-sm font-medium border-b-2 transition-colors ${activeTab === "queue"
+                ? "border-blue-500 text-blue-600 bg-blue-50"
+                : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                }`}
             >
               <div className="flex items-center space-x-2">
                 <MonitorSpeaker className="h-4 w-4" />
@@ -445,8 +445,15 @@ export function Appointments() {
 
                             <td className="px-4 py-3 text-sm text-gray-700">
                               <div>
-                                <div className="font-medium">
+                                <div className="font-medium flex items-center gap-1">
                                   {appointment.appointment_type || "General"}
+                                  {appointment.appointment_type
+                                    ?.toLowerCase()
+                                    .includes("video") && (
+                                      <span className="px-1.5 py-0.5 bg-green-100 text-green-700 text-xs rounded">
+                                        <Video className="w-3 h-3 inline" />
+                                      </span>
+                                    )}
                                 </div>
                                 <div className="text-xs text-gray-500">
                                   {appointment.duration_minutes || 30} min
@@ -460,7 +467,7 @@ export function Appointments() {
                                   {appointment.actual_start_time &&
                                     appointment.actual_end_time &&
                                     appointment.status ===
-                                      AppointmentStatus.COMPLETED && (
+                                    AppointmentStatus.COMPLETED && (
                                       <span className="text-orange-600 block">
                                         Actual:{" "}
                                         {Math.round(
@@ -470,7 +477,7 @@ export function Appointments() {
                                             new Date(
                                               appointment.actual_start_time
                                             ).getTime()) /
-                                            (1000 * 60)
+                                          (1000 * 60)
                                         )}{" "}
                                         min
                                       </span>
@@ -481,11 +488,10 @@ export function Appointments() {
 
                             <td className="px-4 py-3">
                               <span
-                                className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
-                                  statusStyles[
-                                    appointment.status as keyof typeof statusStyles
-                                  ] || statusStyles[AppointmentStatus.SCHEDULED]
-                                }`}
+                                className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${statusStyles[
+                                  appointment.status as keyof typeof statusStyles
+                                ] || statusStyles[AppointmentStatus.SCHEDULED]
+                                  }`}
                               >
                                 {(appointment.status || "scheduled").replace(
                                   "_",
@@ -511,7 +517,7 @@ export function Appointments() {
 
                             <td className="px-4 py-3 text-sm text-gray-700">
                               {typeof appointment.queue_position ===
-                              "number" ? (
+                                "number" ? (
                                 <div>
                                   <div className="font-medium">
                                     #{appointment.queue_position}
@@ -525,6 +531,24 @@ export function Appointments() {
 
                             <td className="px-4 py-3 text-right">
                               <div className="flex items-center justify-end gap-1">
+                                {/* Video Call Link - Copy to clipboard */}
+                                {appointment.appointment_type
+                                  ?.toLowerCase()
+                                  .includes("video") &&
+                                  (appointment as any).video_call_id && (
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        const link = `${window.location.origin}/admin/video-room?callId=${(appointment as any).video_call_id}&userId=doctor-${appointment.clinic_doctor?.id || "doc"}&userName=Dr. ${appointment.clinic_doctor?.doctor_profile?.full_name || "Doctor"}`;
+                                        navigator.clipboard.writeText(link);
+                                        alert("Video call link copied to clipboard!");
+                                      }}
+                                      className="p-1.5 text-white bg-blue-600 hover:bg-blue-700 rounded transition-colors"
+                                      title="Copy Video Call Link"
+                                    >
+                                      <Link2 className="w-4 h-4" />
+                                    </button>
+                                  )}
                                 <button
                                   onClick={() => openDetails(appointment)}
                                   className="p-1.5 text-gray-400 hover:text-blue-600 rounded transition-colors"
@@ -534,11 +558,11 @@ export function Appointments() {
                                 </button>
                                 {!isPast &&
                                   appointment.status !==
-                                    AppointmentStatus.CANCELLED &&
+                                  AppointmentStatus.CANCELLED &&
                                   appointment.status !==
-                                    AppointmentStatus.COMPLETED &&
+                                  AppointmentStatus.COMPLETED &&
                                   appointment.status !==
-                                    AppointmentStatus.NO_SHOW && (
+                                  AppointmentStatus.NO_SHOW && (
                                     <button
                                       onClick={() =>
                                         handleRescheduleAppointment(appointment)
