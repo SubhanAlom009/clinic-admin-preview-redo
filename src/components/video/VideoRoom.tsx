@@ -92,7 +92,10 @@ function DiscordLayout({ onLeave }: { onLeave?: () => void }) {
                 <div className="flex-1 bg-gray-800 rounded-xl overflow-hidden relative flex items-center justify-center">
                     {localParticipant ? (
                         <>
-                            <ParticipantView participant={localParticipant} />
+                            <ParticipantView
+                                participant={localParticipant}
+                                trackType="videoTrack"
+                            />
                             <div className="absolute bottom-3 left-3 bg-black/60 px-3 py-1 rounded-lg text-white text-sm font-medium">
                                 You (Doctor)
                             </div>
@@ -108,7 +111,10 @@ function DiscordLayout({ onLeave }: { onLeave?: () => void }) {
                 <div className="flex-1 bg-gray-800 rounded-xl overflow-hidden relative flex items-center justify-center">
                     {remoteParticipant ? (
                         <>
-                            <ParticipantView participant={remoteParticipant} />
+                            <ParticipantView
+                                participant={remoteParticipant}
+                                trackType="videoTrack"
+                            />
                             <div className="absolute bottom-3 left-3 bg-black/60 px-3 py-1 rounded-lg text-white text-sm font-medium">
                                 {remoteParticipant.name || "Patient"}
                             </div>
@@ -158,6 +164,10 @@ export function VideoRoom({ callId, userId, userName, onLeave }: VideoRoomProps)
                 // Create and join call
                 const videoCall = videoClient.call("default", callId);
                 await videoCall.join({ create: true });
+
+                // Enable camera and microphone explicitly after joining
+                await videoCall.camera.enable();
+                await videoCall.microphone.enable();
 
                 if (!mounted) return;
 
