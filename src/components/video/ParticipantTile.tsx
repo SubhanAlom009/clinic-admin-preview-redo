@@ -1,6 +1,6 @@
-import { ParticipantView, StreamVideoParticipant } from "@stream-io/video-react-sdk";
+import { ParticipantView, StreamVideoParticipant, useCallStateHooks } from "@stream-io/video-react-sdk";
 import { useState, useEffect, useRef } from "react";
-import { VideoOff, MicOff } from "lucide-react";
+import { MicOff } from "lucide-react";
 
 interface ParticipantTileProps {
     participant: StreamVideoParticipant;
@@ -16,17 +16,12 @@ export function ParticipantTile({ participant, isLocal = false, className = "", 
     const isScreenShare = !forceVideoOnly && !!participant.screenShareStream;
     const [isPortrait, setIsPortrait] = useState(false);
 
-    // Check if camera is enabled - use publishedTracks for remote, videoStream for local
-    const hasVideo = isScreenShare
-        ? !!participant.screenShareStream
-        : (isLocal
-            ? !!(participant.videoStream && participant.videoStream.getVideoTracks().length > 0 && participant.videoStream.getVideoTracks()[0].enabled)
-            : participant.publishedTracks.includes('video' as any));
+    // Use Stream SDK's useMicrophoneState hook for LOCAL participant mute status
+    const { useMicrophoneState } = useCallStateHooks();
+    const { isMute: isLocalMicMuted } = useMicrophoneState();
 
-    // Check if microphone is muted - use publishedTracks for remote, audioStream for local
-    const isMicMuted = isLocal
-        ? !(participant.audioStream && participant.audioStream.getAudioTracks().length > 0 && participant.audioStream.getAudioTracks()[0].enabled)
-        : !participant.publishedTracks.includes('audio' as any);
+    // For LOCAL: use SDK's isMute, For REMOTE: check if NOT speaking (rough indicator)
+    const showMicMutedIcon = isLocal ? isLocalMicMuted : !participant.isSpeaking;
 
     useEffect(() => {
         if (isScreenShare && videoRef.current && participant.screenShareStream) {
@@ -59,7 +54,6 @@ export function ParticipantTile({ participant, isLocal = false, className = "", 
     }, [participant, isScreenShare]);
 
     const objectFitClass = isScreenShare ? 'object-contain' : (isPortrait ? 'object-contain' : 'object-cover');
-    const nameInitial = participant.name?.charAt(0).toUpperCase() || '?';
 
     return (
         <div className={`relative overflow-hidden rounded-2xl bg-gray-800 border transition-all duration-300 ${isSpeaking
@@ -67,34 +61,22 @@ export function ParticipantTile({ participant, isLocal = false, className = "", 
             : "border-gray-700/50"
             } ${className}`}>
 
-            {hasVideo ? (
-                isScreenShare ? (
-                    <div className="absolute inset-0 w-full h-full flex items-center justify-center bg-black">
-                        <video
-                            ref={videoRef}
-                            autoPlay
-                            playsInline
-                            muted={isLocal}
-                            className={`w-full h-full ${objectFitClass}`}
-                        />
-                    </div>
-                ) : (
-                    <div className={`absolute inset-0 w-full h-full flex items-center justify-center [&_video]:w-full [&_video]:h-full [&_video]:${objectFitClass} [&_.str-video__participant-view]:w-full [&_.str-video__participant-view]:h-full [&_.str-video__video]:${objectFitClass}`}>
-                        <ParticipantView
-                            participant={participant}
-                            ParticipantViewUI={null}
-                        />
-                    </div>
-                )
+            {isScreenShare ? (
+                <div className="absolute inset-0 w-full h-full flex items-center justify-center bg-black">
+                    <video
+                        ref={videoRef}
+                        autoPlay
+                        playsInline
+                        muted={isLocal}
+                        className={`w-full h-full ${objectFitClass}`}
+                    />
+                </div>
             ) : (
-                <div className="absolute inset-0 w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-gray-800 to-gray-900">
-                    <div className="w-20 h-20 md:w-24 md:h-24 rounded-full bg-teal-600/20 border-2 border-teal-500/30 flex items-center justify-center mb-4">
-                        <span className="text-3xl md:text-4xl font-bold text-teal-400">{nameInitial}</span>
-                    </div>
-                    <div className="flex flex-col items-center gap-2 text-gray-400">
-                        <VideoOff size={24} className="opacity-60" />
-                        <span className="text-sm font-medium">Camera Off</span>
-                    </div>
+                <div className={`absolute inset-0 w-full h-full flex items-center justify-center [&_video]:w-full [&_video]:h-full [&_video]:${objectFitClass} [&_.str-video__participant-view]:w-full [&_.str-video__participant-view]:h-full [&_.str-video__video]:${objectFitClass}`}>
+                    <ParticipantView
+                        participant={participant}
+                        ParticipantViewUI={null}
+                    />
                 </div>
             )}
 
@@ -104,7 +86,7 @@ export function ParticipantTile({ participant, isLocal = false, className = "", 
                     <span className="text-white text-sm font-medium tracking-wide truncate max-w-[120px]">
                         {isLocal ? "You" : participant.name}
                     </span>
-                    {isMicMuted && (
+                    {isLocal && showMicMutedIcon && (
                         <MicOff size={14} className="text-red-400 flex-shrink-0" />
                     )}
                 </div>
