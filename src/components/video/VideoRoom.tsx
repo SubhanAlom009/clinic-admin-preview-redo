@@ -21,9 +21,10 @@ interface VideoRoomProps {
 }
 
 function DoctorDashboardLayout({ onLeave, callId, patientName, patientSymptoms }: { onLeave?: () => void, callId?: string, patientName?: string, patientSymptoms?: string }) {
-    const { useRemoteParticipants, useLocalParticipant } = useCallStateHooks();
+    const { useRemoteParticipants, useLocalParticipant, useParticipants } = useCallStateHooks();
     const remoteParticipants = useRemoteParticipants();
     const localParticipant = useLocalParticipant();
+    const allParticipants = useParticipants();
     const [showSidebar, setShowSidebar] = useState(false);
 
     // Auto-open sidebar on large screens initially
@@ -33,50 +34,101 @@ function DoctorDashboardLayout({ onLeave, callId, patientName, patientSymptoms }
         }
     }, []);
 
-    // Get first remote participant (the patient) - useRemoteParticipants returns ONLY remote participants
+    // Get first remote participant (the patient)
     const remoteParticipant = remoteParticipants[0];
+
+    // Check if anyone is screen sharing
+    const screenSharingParticipant = allParticipants.find(p => p.screenShareStream);
+    const isScreenSharing = !!screenSharingParticipant;
 
     // Debug logging
     console.log("🏥 [DOCTOR] Remote Participants Count:", remoteParticipants.length);
-    console.log("🏥 [DOCTOR] Remote Participant Name:", remoteParticipant?.name);
-    console.log("🏥 [DOCTOR] Local Participant Name:", localParticipant?.name);
+    console.log("🏥 [DOCTOR] Screen Sharing:", isScreenSharing);
+    console.log("🏥 [DOCTOR] Screen Sharing Participant:", screenSharingParticipant?.name);
 
     return (
         <div className="flex bg-gray-900 h-screen overflow-hidden w-full relative">
             {/* Main Content Area */}
             <div className={`flex-1 flex flex-col min-w-0 transition-all duration-300 relative h-full bg-gray-900`}>
 
-                {/* Video Grid Area */}
-                <div className="flex-1 p-2 md:p-4 flex items-center justify-center overflow-hidden">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4 w-full h-full max-w-6xl">
+                {/* Video Area */}
+                <div className="flex-1 p-2 md:p-4 flex flex-col items-center justify-center overflow-hidden">
 
-                        {/* Remote Participant (Patient) */}
-                        <div className="relative w-full h-full min-h-[200px] rounded-2xl overflow-hidden shadow-2xl ring-1 ring-white/10 bg-gray-800">
-                            {remoteParticipant ? (
-                                <ParticipantTile
-                                    participant={remoteParticipant}
-                                    className="w-full h-full"
-                                />
-                            ) : (
-                                <div className="w-full h-full flex flex-col items-center justify-center text-gray-400 bg-gray-800/50 p-4 text-center">
-                                    <div className="w-16 h-16 md:w-20 md:h-20 rounded-full bg-gray-700/50 animate-pulse mb-4" />
-                                    <span className="font-medium text-sm md:text-base">Waiting for patient to join...</span>
+                    {isScreenSharing ? (
+                        // Google Meet-style: Large screen share + small video thumbnails on top
+                        <>
+                            {/* Screen Share Indicator */}
+                            <div className="w-full bg-teal-600/20 border-b border-teal-600/50 px-3 py-2 mb-2">
+                                <div className="flex items-center justify-center gap-2 text-teal-400 text-xs md:text-sm">
+                                    <div className="w-2 h-2 bg-teal-500 rounded-full animate-pulse"></div>
+                                    <span className="font-medium">Screen sharing active</span>
                                 </div>
-                            )}
-                        </div>
+                            </div>
 
-                        {/* Local Participant (Doctor) */}
-                        <div className="relative w-full h-full min-h-[200px] rounded-2xl overflow-hidden shadow-2xl ring-1 ring-white/10 bg-gray-800">
-                            {localParticipant && (
+                            {/* Small video thumbnails at top - mobile optimized */}
+                            <div className="w-full flex gap-1.5 md:gap-3 mb-2 md:mb-3 justify-center px-2">
+                                {/* Local participant thumbnail */}
+                                {localParticipant && (
+                                    <div className="w-24 h-18 sm:w-32 sm:h-24 md:w-40 md:h-28 flex-shrink-0">
+                                        <ParticipantTile
+                                            participant={localParticipant}
+                                            isLocal={true}
+                                            forceVideoOnly={true}
+                                            className="w-full h-full"
+                                        />
+                                    </div>
+                                )}
+
+                                {/* Remote participant thumbnail */}
+                                {remoteParticipant && (
+                                    <div className="w-24 h-18 sm:w-32 sm:h-24 md:w-40 md:h-28 flex-shrink-0">
+                                        <ParticipantTile
+                                            participant={remoteParticipant}
+                                            forceVideoOnly={true}
+                                            className="w-full h-full"
+                                        />
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Large screen share view - mobile responsive */}
+                            <div className="flex-1 w-full max-w-6xl rounded-lg md:rounded-2xl overflow-hidden shadow-2xl ring-1 ring-white/10 bg-black">
                                 <ParticipantTile
-                                    participant={localParticipant}
-                                    isLocal={true}
+                                    participant={screenSharingParticipant}
                                     className="w-full h-full"
                                 />
-                            )}
-                        </div>
+                            </div>
+                        </>
+                    ) : (
+                        // Normal grid view when not sharing
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4 w-full h-full max-w-6xl">
+                            {/* Remote Participant (Patient) */}
+                            <div className="relative w-full h-full min-h-[200px] rounded-2xl overflow-hidden shadow-2xl ring-1 ring-white/10 bg-gray-800">
+                                {remoteParticipant ? (
+                                    <ParticipantTile
+                                        participant={remoteParticipant}
+                                        className="w-full h-full"
+                                    />
+                                ) : (
+                                    <div className="w-full h-full flex flex-col items-center justify-center text-gray-400 bg-gray-800/50 p-4 text-center">
+                                        <div className="w-16 h-16 md:w-20 md:h-20 rounded-full bg-gray-700/50 animate-pulse mb-4" />
+                                        <span className="font-medium text-sm md:text-base">Waiting for patient to join...</span>
+                                    </div>
+                                )}
+                            </div>
 
-                    </div>
+                            {/* Local Participant (Doctor) */}
+                            <div className="relative w-full h-full min-h-[200px] rounded-2xl overflow-hidden shadow-2xl ring-1 ring-white/10 bg-gray-800">
+                                {localParticipant && (
+                                    <ParticipantTile
+                                        participant={localParticipant}
+                                        isLocal={true}
+                                        className="w-full h-full"
+                                    />
+                                )}
+                            </div>
+                        </div>
+                    )}
                 </div>
 
                 {/* Floating Controls */}
@@ -89,7 +141,7 @@ function DoctorDashboardLayout({ onLeave, callId, patientName, patientSymptoms }
                 </div>
             </div>
 
-            {/* Sidebar - Responsive (Overlay on mobile, Push on desktop) */}
+            {/* Sidebar - Responsive */}
             <div className={`
                 fixed inset-y-0 right-0 z-50 
                 w-full md:w-80 
@@ -106,7 +158,6 @@ function DoctorDashboardLayout({ onLeave, callId, patientName, patientSymptoms }
                             <p className="text-gray-400 text-sm">Session Details</p>
                             <p className="text-gray-500 text-[10px] font-mono mt-1">ID: {callId?.slice(-6)}</p>
                         </div>
-                        {/* Close button for mobile */}
                         <button
                             onClick={() => setShowSidebar(false)}
                             className="lg:hidden p-2 text-gray-400 hover:text-white"
@@ -116,7 +167,6 @@ function DoctorDashboardLayout({ onLeave, callId, patientName, patientSymptoms }
                     </div>
 
                     <div className="p-6 space-y-6 overflow-y-auto flex-1">
-                        {/* Dynamic Patient Data from URL params */}
                         <div>
                             <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-1">Name</label>
                             <p className="text-white text-lg font-medium">{patientName || "Unknown Patient"}</p>
@@ -157,14 +207,12 @@ export function VideoRoom({ callId, userId, userName, patientName, patientSympto
 
         const initializeCall = async () => {
             try {
-                // Get token from Supabase Edge Function
                 const { token, apiKey } = await StreamService.getStreamToken(userId);
 
                 if (!mounted) return;
 
                 console.log("🔑 [ADMIN] Stream API Key from Edge Function:", apiKey);
 
-                // Create Stream client
                 videoClient = new StreamVideoClient({
                     apiKey,
                     user: { id: userId, name: userName },
@@ -173,16 +221,13 @@ export function VideoRoom({ callId, userId, userName, patientName, patientSympto
 
                 setClient(videoClient);
 
-                // Create and join call
                 videoCall = videoClient.call("default", callId);
                 await videoCall.join({ create: true });
 
-                // Enable camera and microphone explicitly after joining
                 try { await videoCall.camera.enable(); } catch (e) { console.log("Camera enable failed:", e); }
                 try { await videoCall.microphone.enable(); } catch (e) { console.log("Mic enable failed:", e); }
 
                 if (!mounted) {
-                    // If unmounted during async, cleanup immediately
                     await videoCall.leave();
                     videoClient.disconnectUser();
                     return;
@@ -201,7 +246,6 @@ export function VideoRoom({ callId, userId, userName, patientName, patientSympto
 
         initializeCall();
 
-        // Cleanup function - uses variables from this scope, not state
         return () => {
             console.log("🧹 [ADMIN] Cleaning up video call...");
             mounted = false;
