@@ -539,7 +539,17 @@ export function Appointments() {
                                     <button
                                       onClick={(e) => {
                                         e.stopPropagation();
-                                        const link = `${window.location.origin}/admin/video-room?callId=${(appointment as any).video_call_id}&userId=doctor-${appointment.clinic_doctor?.id || "doc"}&userName=Dr. ${appointment.clinic_doctor?.doctor_profile?.full_name || "Doctor"}`;
+                                        // Include patient data for sidebar
+                                        const patientName = appointment.clinic_patient?.patient_profile?.full_name || "Patient";
+                                        const symptoms = (appointment as any).symptoms || "Not provided";
+                                        const params = new URLSearchParams({
+                                          callId: (appointment as any).video_call_id,
+                                          userId: `doctor-${appointment.clinic_doctor?.id || "doc"}`,
+                                          userName: `Dr. ${appointment.clinic_doctor?.doctor_profile?.full_name || "Doctor"}`,
+                                          patientName: patientName,
+                                          patientSymptoms: symptoms,
+                                        });
+                                        const link = `${window.location.origin}/admin/video-room?${params.toString()}`;
                                         navigator.clipboard.writeText(link);
                                         alert("Video call link copied to clipboard!");
                                       }}
@@ -602,7 +612,8 @@ export function Appointments() {
       ) : (
         // Queue Dashboard Tab Content
         <QueueTab />
-      )}
+      )
+      }
 
       {/* Modals */}
       <AddAppointmentModal
@@ -623,6 +634,6 @@ export function Appointments() {
         onReschedule={handleRescheduleAppointment as any}
         onAfterUpdate={applyLocalPatch as any}
       />
-    </div>
+    </div >
   );
 }

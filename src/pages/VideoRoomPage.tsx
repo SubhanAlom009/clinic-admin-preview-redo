@@ -10,6 +10,10 @@ export function VideoRoomPage() {
     const userId = searchParams.get("userId") || `doctor-${Date.now()}`;
     const userName = searchParams.get("userName") || "Doctor";
 
+    // Patient info for sidebar
+    const patientName = searchParams.get("patientName") || "Patient";
+    const patientSymptoms = searchParams.get("patientSymptoms") || "Not provided";
+
     if (!callId) {
         return (
             <div className="min-h-screen bg-gray-900 flex items-center justify-center">
@@ -32,6 +36,8 @@ export function VideoRoomPage() {
             callId={callId}
             userId={userId}
             userName={userName}
+            patientName={patientName}
+            patientSymptoms={patientSymptoms}
             onLeave={() => navigate("/admin/appointments")}
         />
     );
