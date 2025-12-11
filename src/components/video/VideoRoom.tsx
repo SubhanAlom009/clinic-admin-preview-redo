@@ -94,7 +94,6 @@ function DiscordLayout({ onLeave }: { onLeave?: () => void }) {
                         <>
                             <ParticipantView
                                 participant={localParticipant}
-                                trackType="videoTrack"
                             />
                             <div className="absolute bottom-3 left-3 bg-black/60 px-3 py-1 rounded-lg text-white text-sm font-medium">
                                 You (Doctor)
@@ -113,7 +112,6 @@ function DiscordLayout({ onLeave }: { onLeave?: () => void }) {
                         <>
                             <ParticipantView
                                 participant={remoteParticipant}
-                                trackType="videoTrack"
                             />
                             <div className="absolute bottom-3 left-3 bg-black/60 px-3 py-1 rounded-lg text-white text-sm font-medium">
                                 {remoteParticipant.name || "Patient"}
