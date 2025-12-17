@@ -5,11 +5,11 @@ import { Select } from "../ui/Select";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/Card";
 import { DoctorSlotService } from "../../services/DoctorSlotService";
 import { toast } from "sonner";
-import { 
-  Calendar, 
-  Filter, 
-  Edit2, 
-  Trash2, 
+import {
+  Calendar,
+  Filter,
+  Edit2,
+  Trash2,
   CheckSquare,
   Square,
   Clock,
@@ -17,11 +17,13 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 
-// Helper function to format time without seconds
+// Helper function to format time to 12-hour format
 const formatTimeWithoutSeconds = (timeString: string): string => {
   if (!timeString) return '';
-  // Remove seconds if present (e.g., "17:30:00" -> "17:30")
-  return timeString.split(':').slice(0, 2).join(':');
+  const [hours, minutes] = timeString.split(':').map(Number);
+  const period = hours >= 12 ? 'PM' : 'AM';
+  const hours12 = hours % 12 || 12;
+  return `${hours12}:${String(minutes).padStart(2, '0')} ${period}`;
 };
 
 interface SlotsManagementTableProps {
@@ -120,8 +122,8 @@ export function SlotsManagementTable({
   };
 
   const handleSelectSlot = (slotId: string) => {
-    setSelectedSlots(prev => 
-      prev.includes(slotId) 
+    setSelectedSlots(prev =>
+      prev.includes(slotId)
         ? prev.filter(id => id !== slotId)
         : [...prev, slotId]
     );
@@ -353,7 +355,7 @@ export function SlotsManagementTable({
               No appointment slots
             </h3>
             <p className="text-gray-500">
-              {filters.status === "active" 
+              {filters.status === "active"
                 ? "No active slots found for the selected criteria."
                 : "No slots found for the selected criteria."}
             </p>
@@ -459,11 +461,10 @@ export function SlotsManagementTable({
                     </td>
                     <td className="px-6 py-2 whitespace-nowrap">
                       <span
-                        className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                          slot.is_active
+                        className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${slot.is_active
                             ? "bg-green-100 text-green-800"
                             : "bg-red-100 text-red-800"
-                        }`}
+                          }`}
                       >
                         {slot.is_active ? "Active" : "Inactive"}
                       </span>

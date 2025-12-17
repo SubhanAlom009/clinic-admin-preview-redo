@@ -134,11 +134,9 @@ export function ManageDoctor() {
       if (result.success) {
         const message = newStatus
           ? `Doctor ${actionText} successfully.`
-          : `Doctor ${actionText} successfully. ${
-              result.data?.affectedAppointments || 0
-            } appointments cancelled, ${
-              result.data?.affectedSlots || 0
-            } slots deactivated.`;
+          : `Doctor ${actionText} successfully. ${result.data?.affectedAppointments || 0
+          } appointments cancelled, ${result.data?.affectedSlots || 0
+          } slots deactivated.`;
 
         toast.success(message);
         setShowToggleModal(false);
@@ -368,11 +366,10 @@ export function ManageDoctor() {
                     Dr. {doctor.full_name}
                   </h1>
                   <span
-                    className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
-                      doctor.clinic_doctor?.is_active
+                    className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${doctor.clinic_doctor?.is_active
                         ? "bg-blue-100 text-blue-800 border border-blue-200"
                         : "bg-gray-100 text-gray-600 border border-gray-200"
-                    }`}
+                      }`}
                   >
                     {doctor.clinic_doctor?.is_active ? "Active" : "Inactive"}
                   </span>
@@ -420,11 +417,10 @@ export function ManageDoctor() {
               <Button
                 variant="outline"
                 onClick={() => setShowToggleModal(true)}
-                className={`px-6 py-2 rounded-lg font-medium transition-all duration-200 ${
-                  doctor.clinic_doctor?.is_active
+                className={`px-6 py-2 rounded-lg font-medium transition-all duration-200 ${doctor.clinic_doctor?.is_active
                     ? "text-orange-600 border-orange-200 hover:bg-orange-50"
                     : "text-green-600 border-green-200 hover:bg-green-50"
-                }`}
+                  }`}
               >
                 <Power className="h-4 w-4 mr-2" />
                 {doctor.clinic_doctor?.is_active ? "Deactivate" : "Activate"}
@@ -497,8 +493,8 @@ export function ManageDoctor() {
                   {doctor.clinic_doctor?.consultation_fee
                     ? `₹${doctor.clinic_doctor.consultation_fee}`
                     : doctor.consultation_fee
-                    ? `₹${doctor.consultation_fee}`
-                    : "Not set"}
+                      ? `₹${doctor.consultation_fee}`
+                      : "Not set"}
                 </p>
               </div>
               <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
@@ -958,7 +954,7 @@ export function ManageDoctor() {
                           </label>
                         </div>
                         {doctor.secondary_specializations &&
-                        doctor.secondary_specializations.length > 0 ? (
+                          doctor.secondary_specializations.length > 0 ? (
                           <div className="flex flex-wrap gap-2">
                             {doctor.secondary_specializations.map(
                               (spec: string, index: number) => (
@@ -989,7 +985,7 @@ export function ManageDoctor() {
                           </label>
                         </div>
                         {doctor.qualifications &&
-                        doctor.qualifications.length > 0 ? (
+                          doctor.qualifications.length > 0 ? (
                           <div className="space-y-2">
                             {doctor.qualifications.map(
                               (qual: string, index: number) => (
@@ -1125,7 +1121,7 @@ export function ManageDoctor() {
                     <SlotCreationForm
                       doctorId={id!}
                       onSlotsCreated={handleSlotsCreated}
-                      onCancel={() => {}}
+                      onCancel={() => { }}
                     />
                   </div>
 
@@ -1183,8 +1179,13 @@ export function ManageDoctor() {
                               {slot.slot_name}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                              {slot.start_time.split(":").slice(0, 2).join(":")}{" "}
-                              - {slot.end_time.split(":").slice(0, 2).join(":")}
+                              {(() => {
+                                const formatTo12Hr = (t: string) => {
+                                  const [h, m] = t.split(':').map(Number);
+                                  return `${h % 12 || 12}:${String(m).padStart(2, '0')} ${h >= 12 ? 'PM' : 'AM'}`;
+                                };
+                                return `${formatTo12Hr(slot.start_time)} - ${formatTo12Hr(slot.end_time)}`;
+                              })()}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                               {slot.current_bookings}/{slot.max_capacity}
@@ -1195,11 +1196,10 @@ export function ManageDoctor() {
                                   <div
                                     className="bg-blue-600 h-2 rounded-full"
                                     style={{
-                                      width: `${
-                                        (slot.current_bookings /
+                                      width: `${(slot.current_bookings /
                                           slot.max_capacity) *
                                         100
-                                      }%`,
+                                        }%`,
                                     }}
                                   ></div>
                                 </div>
@@ -1207,7 +1207,7 @@ export function ManageDoctor() {
                                   {Math.round(
                                     (slot.current_bookings /
                                       slot.max_capacity) *
-                                      100
+                                    100
                                   )}
                                   %
                                 </span>
@@ -1250,18 +1250,16 @@ export function ManageDoctor() {
             <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6 transform transition-all">
               <div className="flex items-center space-x-3 mb-4">
                 <div
-                  className={`w-12 h-12 rounded-full flex items-center justify-center ${
-                    doctor.clinic_doctor?.is_active
+                  className={`w-12 h-12 rounded-full flex items-center justify-center ${doctor.clinic_doctor?.is_active
                       ? "bg-orange-100"
                       : "bg-green-100"
-                  }`}
+                    }`}
                 >
                   <Power
-                    className={`h-6 w-6 ${
-                      doctor.clinic_doctor?.is_active
+                    className={`h-6 w-6 ${doctor.clinic_doctor?.is_active
                         ? "text-orange-600"
                         : "text-green-600"
-                    }`}
+                      }`}
                   />
                 </div>
                 <div>
@@ -1360,11 +1358,10 @@ export function ManageDoctor() {
                 <Button
                   onClick={handleToggleActiveStatus}
                   disabled={isTogglingStatus}
-                  className={`flex-1 ${
-                    doctor.clinic_doctor?.is_active
+                  className={`flex-1 ${doctor.clinic_doctor?.is_active
                       ? "bg-orange-600 hover:bg-orange-700"
                       : "bg-green-600 hover:bg-green-700"
-                  } disabled:opacity-50 disabled:cursor-not-allowed`}
+                    } disabled:opacity-50 disabled:cursor-not-allowed`}
                 >
                   {isTogglingStatus ? (
                     <>

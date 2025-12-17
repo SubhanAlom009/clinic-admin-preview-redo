@@ -794,6 +794,57 @@ export class AppointmentRequestService extends BaseService {
         );
       }
 
+      // ==========================================
+      // 🧾 AUTO-CREATE BILL FOR VIDEO CONSULTATIONS
+      // ==========================================
+      if (isVideoConsultation && requestData.payment_id) {
+        try {
+          console.log("💰 [BILLING] Auto-creating bill for video consultation with payment");
+
+          // Generate bill number
+          const now = new Date();
+          const year = now.getFullYear();
+          const month = String(now.getMonth() + 1).padStart(2, "0");
+          const day = String(now.getDate()).padStart(2, "0");
+          const random = Math.floor(Math.random() * 1000).toString().padStart(3, "0");
+          const billNumber = `VC-${year}${month}${day}-${random}`;
+
+          // Get consultation fee
+          const consultationFee = requestData.paid_amount ||
+            requestData.clinic_doctor?.consultation_fee ||
+            500; // Default fee
+
+          const billData = {
+            user_id: user.id,
+            appointment_id: (appointment as any).id,
+            clinic_patient_id: clinicPatient!.id,
+            bill_number: billNumber,
+            amount: consultationFee,
+            tax_amount: 0,
+            total_amount: consultationFee,
+            status: "paid", // Already paid via Razorpay
+            payment_mode: "upi", // Razorpay mostly uses UPI
+            payment_date: new Date().toISOString(),
+            notes: `Video consultation with Dr. ${requestData.clinic_doctor?.doctor_profile?.full_name || "Doctor"} - Payment ID: ${requestData.payment_id}`,
+          };
+
+          const { data: billResult, error: billError } = await supabase
+            .from("bills")
+            .insert(billData as any)
+            .select()
+            .single();
+
+          if (billError) {
+            console.error("❌ [BILLING] Failed to create auto-bill:", billError);
+          } else {
+            console.log("✅ [BILLING] Auto-bill created successfully:", billResult);
+          }
+        } catch (billError) {
+          console.error("❌ [BILLING] Exception creating auto-bill:", billError);
+          // Don't fail the approval if billing fails
+        }
+      }
+
       return { success: true, data: null };
     } catch (error) {
       return { error: this.handleError(error), success: false };

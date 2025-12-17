@@ -9,6 +9,8 @@ import { useAuth } from "../../hooks/useAuth";
 import { Doctor, Patient } from "../../types";
 import { AppointmentStatus } from "../../constants";
 import { format } from "date-fns";
+import { WhatsAppService } from "../../services/WhatsAppService";
+
 
 interface QueueManagementModalProps {
   isOpen: boolean;
@@ -114,18 +116,34 @@ export function QueueManagementModal({
         delayReason,
       });
 
-      // Get all appointments for the entire day
+      // Get all appointments for the entire day WITH patient info for WhatsApp
       const startTime = new Date(`${selectedDate}T00:00:00`);
       const endTime = new Date(`${selectedDate}T23:59:59`);
+
+      // Get doctor info for notification
+      const selectedDoctorData = doctors.find((d) => d.id === selectedDoctor);
+      const doctorName = selectedDoctorData?.name || "your doctor";
 
       console.log("Searching for appointments between:", {
         startTime: startTime.toISOString(),
         endTime: endTime.toISOString(),
       });
 
+      // Updated query to include patient info for WhatsApp notifications
       const { data: appointments, error: fetchError } = await (supabase as any)
         .from("appointments")
-        .select("*")
+        .select(`
+          *,
+          clinic_patient:clinic_patients(
+            id,
+            patient_profile:patient_profiles(
+              id,
+              full_name,
+              phone,
+              email
+            )
+          )
+        `)
         .eq("clinic_doctor_id", selectedDoctor)
         .gte("appointment_datetime", startTime.toISOString())
         .lt("appointment_datetime", endTime.toISOString())
@@ -143,7 +161,8 @@ export function QueueManagementModal({
         appointments?.map((a: any) => ({
           id: a.id,
           status: a.status,
-          patient: a.clinic_patient_id,
+          patientName: a.clinic_patient?.patient_profile?.full_name,
+          patientPhone: a.clinic_patient?.patient_profile?.phone,
         }))
       );
 
@@ -168,6 +187,7 @@ export function QueueManagementModal({
           .update({
             appointment_datetime: newDateTime.toISOString(),
             delay_minutes: (appointment.delay_minutes || 0) + delay,
+            delay_reason: delayReason || "Doctor running late",
             updated_at: new Date().toISOString(),
           })
           .eq("id", appointment.id);
@@ -177,14 +197,66 @@ export function QueueManagementModal({
           throw error;
         }
 
-        return true;
+        return { ...appointment, newDateTime };
       });
 
-      await Promise.all(updates);
+      const updatedAppointments = await Promise.all(updates);
       console.log("All appointments updated successfully");
 
+      // Send WhatsApp notifications to all affected patients
+      console.log("📱 Sending WhatsApp delay notifications...");
+      let notificationsSent = 0;
+      let notificationsFailed = 0;
+
+      for (const appointment of updatedAppointments) {
+        const patientPhone = appointment.clinic_patient?.patient_profile?.phone;
+        const patientName = appointment.clinic_patient?.patient_profile?.full_name || "Patient";
+
+        if (patientPhone) {
+          try {
+            // Format the new expected time nicely (e.g., "3:30 PM")
+            const newTime = new Date(appointment.newDateTime);
+            const hours = newTime.getHours();
+            const minutes = newTime.getMinutes();
+            const period = hours >= 12 ? "PM" : "AM";
+            const displayHour = hours > 12 ? hours - 12 : hours === 0 ? 12 : hours;
+            const newExpectedTime = `${displayHour}:${minutes.toString().padStart(2, "0")} ${period}`;
+
+            // Get clinic name from user context
+            const clinicName = "Our Clinic"; // You can fetch this from user context if needed
+
+            console.log(`📤 Sending delay notification to ${patientName} (${patientPhone})`);
+
+            const result = await WhatsAppService.sendAppointmentDelay({
+              phone: patientPhone,
+              patientName: patientName,
+              doctorName: `Dr. ${doctorName}`,
+              delayMinutes: String(delay),
+              newExpectedTime: newExpectedTime,
+              clinicName: clinicName,
+            });
+
+            if (result.success) {
+              notificationsSent++;
+              console.log(`✅ Delay notification sent to ${patientName}`);
+            } else {
+              notificationsFailed++;
+              console.error(`❌ Failed to send notification to ${patientName}:`, result.error);
+            }
+          } catch (whatsappError) {
+            notificationsFailed++;
+            console.error(`❌ WhatsApp error for ${patientName}:`, whatsappError);
+          }
+        } else {
+          console.warn(`⚠️ No phone number for patient: ${patientName}`);
+        }
+      }
+
+      console.log(`📊 WhatsApp results: ${notificationsSent} sent, ${notificationsFailed} failed`);
+
       alert(
-        `Successfully added ${delay} minute delay to ${appointments.length} active appointments`
+        `Successfully added ${delay} minute delay to ${appointments.length} appointments.\n` +
+        `WhatsApp notifications: ${notificationsSent} sent, ${notificationsFailed} failed.`
       );
 
       // Queue recalculation is now handled automatically by PGMQ
@@ -198,6 +270,7 @@ export function QueueManagementModal({
       setLoading(false);
     }
   };
+
 
   const handleEmergencyAppointment = async () => {
     if (!selectedPatient) {
@@ -308,22 +381,20 @@ export function QueueManagementModal({
         <div className="flex border-b border-gray-200 mb-6">
           <button
             onClick={() => handleTabChange("delay")}
-            className={`px-4 py-2 text-sm font-medium border-b-2 mr-4 ${
-              activeTab === "delay"
-                ? "border-blue-500 text-blue-600"
-                : "border-transparent text-gray-500 hover:text-gray-700"
-            }`}
+            className={`px-4 py-2 text-sm font-medium border-b-2 mr-4 ${activeTab === "delay"
+              ? "border-blue-500 text-blue-600"
+              : "border-transparent text-gray-500 hover:text-gray-700"
+              }`}
           >
             <Clock className="h-4 w-4 inline mr-2" />
             Add Delay
           </button>
           <button
             onClick={() => handleTabChange("emergency")}
-            className={`px-4 py-2 text-sm font-medium border-b-2 ${
-              activeTab === "emergency"
-                ? "border-red-500 text-red-600"
-                : "border-transparent text-gray-500 hover:text-gray-700"
-            }`}
+            className={`px-4 py-2 text-sm font-medium border-b-2 ${activeTab === "emergency"
+              ? "border-red-500 text-red-600"
+              : "border-transparent text-gray-500 hover:text-gray-700"
+              }`}
           >
             <AlertTriangle className="h-4 w-4 inline mr-2" />
             Emergency

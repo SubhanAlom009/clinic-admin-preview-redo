@@ -43,14 +43,14 @@ export function EditDoctorModal({
     max_patients_per_slot: "10",
     slot_creation_enabled: true,
   });
-  
+
   const [loading, setLoading] = useState(false);
   const [showSlotCreator, setShowSlotCreator] = useState(false);
   const [selectedDate, setSelectedDate] = useState("");
   const [existingSlots, setExistingSlots] = useState<AvailableSlot[]>([]);
   const [loadingSlots, setLoadingSlots] = useState(false);
   const { user } = useAuth();
-  
+
   // Use our new validation system
   const { errors, validate, validateField, clearErrors } = useFormValidation(doctorFormSchema);
 
@@ -121,7 +121,7 @@ export function EditDoctorModal({
     try {
       // Validate form data using our new validation system
       const validationResult = validate(formData);
-      
+
       if (!validationResult.isValid) {
         toast.error("Please fix the validation errors");
         setLoading(false);
@@ -219,14 +219,14 @@ export function EditDoctorModal({
 
   const fetchExistingSlots = async () => {
     if (!selectedDate || !doctor?.clinic_doctor) return;
-    
+
     setLoadingSlots(true);
     try {
       const result = await DoctorSlotService.getAvailableSlots(
         doctor.clinic_doctor.id,
         selectedDate
       );
-      
+
       if (result.success && result.data) {
         setExistingSlots(result.data);
       } else {
@@ -267,7 +267,7 @@ export function EditDoctorModal({
       ...formData,
       [name]: value,
     });
-    
+
     // Clear field error when user starts typing
     if (errors[name]) {
       validateField(name, value);
@@ -367,9 +367,8 @@ export function EditDoctorModal({
             onChange={handleInputChange}
             onBlur={() => handleFieldBlur("qualifications")}
             rows={3}
-            className={`block w-full px-3 py-2 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-              errors.qualifications ? 'border-red-300 focus:ring-red-500' : 'border-gray-300'
-            }`}
+            className={`block w-full px-3 py-2 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${errors.qualifications ? 'border-red-300 focus:ring-red-500' : 'border-gray-300'
+              }`}
             placeholder="Enter qualifications and certifications"
           />
           {errors.qualifications && (
@@ -408,9 +407,8 @@ export function EditDoctorModal({
             onChange={handleInputChange}
             onBlur={() => handleFieldBlur("bio")}
             rows={4}
-            className={`block w-full px-3 py-2 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-              errors.bio ? 'border-red-300 focus:ring-red-500' : 'border-gray-300'
-            }`}
+            className={`block w-full px-3 py-2 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${errors.bio ? 'border-red-300 focus:ring-red-500' : 'border-gray-300'
+              }`}
             placeholder="A short professional bio for the doctor's profile"
           />
           {errors.bio && (
@@ -475,7 +473,7 @@ export function EditDoctorModal({
                 Slot Management
               </h3>
             </div>
-            
+
             {/* Date Selection */}
             <div className="mb-4">
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -525,7 +523,7 @@ export function EditDoctorModal({
                 <h4 className="text-sm font-medium text-gray-900 mb-3">
                   Existing Slots for {new Date(selectedDate).toLocaleDateString()}
                 </h4>
-                
+
                 {loadingSlots ? (
                   <div className="text-center py-4">
                     <div className="text-sm text-gray-500">Loading slots...</div>
@@ -543,7 +541,10 @@ export function EditDoctorModal({
                               {slot.slot_name}
                             </span>
                             <span className="text-sm text-gray-500">
-                              {slot.start_time} - {slot.end_time}
+                              {(() => {
+                                const fmt = (t: string) => { const [h, m] = t.split(':').map(Number); return `${h % 12 || 12}:${String(m).padStart(2, '0')} ${h >= 12 ? 'PM' : 'AM'}`; };
+                                return `${fmt(slot.start_time)} - ${fmt(slot.end_time)}`;
+                              })()}
                             </span>
                             <span className="text-sm text-blue-600">
                               {slot.current_bookings}/{slot.max_capacity} patients

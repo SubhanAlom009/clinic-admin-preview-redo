@@ -646,21 +646,19 @@ export function QueueTab() {
             <div className="flex space-x-1 bg-gray-100 p-1 rounded-lg">
               <button
                 onClick={() => setActiveTab("active")}
-                className={`px-4 py-2 text-sm font-medium rounded-md transition-all ${
-                  activeTab === "active"
+                className={`px-4 py-2 text-sm font-medium rounded-md transition-all ${activeTab === "active"
                     ? "bg-white text-blue-600 shadow-sm"
                     : "text-gray-600 hover:text-gray-900"
-                }`}
+                  }`}
               >
                 Active Queue ({activeAppointments.length})
               </button>
               <button
                 onClick={() => setActiveTab("completed")}
-                className={`px-4 py-2 text-sm font-medium rounded-md transition-all ${
-                  activeTab === "completed"
+                className={`px-4 py-2 text-sm font-medium rounded-md transition-all ${activeTab === "completed"
                     ? "bg-white text-green-600 shadow-sm"
                     : "text-gray-600 hover:text-gray-900"
-                }`}
+                  }`}
               >
                 Completed ({completedAppointments.length})
               </button>
@@ -727,18 +725,18 @@ export function QueueTab() {
               {(selectedDoctor ||
                 searchTerm ||
                 selectedDate !== format(new Date(), "yyyy-MM-dd")) && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    setSelectedDoctor("");
-                    setSelectedDate(format(new Date(), "yyyy-MM-dd"));
-                    setSearchTerm("");
-                  }}
-                >
-                  Clear Filters
-                </Button>
-              )}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setSelectedDoctor("");
+                      setSelectedDate(format(new Date(), "yyyy-MM-dd"));
+                      setSearchTerm("");
+                    }}
+                  >
+                    Clear Filters
+                  </Button>
+                )}
             </div>
           </div>
 
@@ -838,11 +836,11 @@ export function QueueTab() {
                           )}`}
                         >
                           {appointment.status === AppointmentStatus.SCHEDULED &&
-                          appointment.patient_checked_in
+                            appointment.patient_checked_in
                             ? "Checked-In"
                             : appointment.status
-                                ?.replace("-", " ")
-                                .replace(/\b\w/g, (l) => l.toUpperCase())}
+                              ?.replace("-", " ")
+                              .replace(/\b\w/g, (l) => l.toUpperCase())}
                         </span>
                         {appointment.emergency_status && (
                           <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800 border border-red-200">
@@ -856,7 +854,7 @@ export function QueueTab() {
                           <Clock className="h-4 w-4 mr-1" />
                           {format(
                             new Date(appointment.appointment_datetime),
-                            "HH:mm"
+                            "h:mm a"
                           )}
                         </div>
                         <div className="flex items-center">

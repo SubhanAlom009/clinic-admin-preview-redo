@@ -31,7 +31,7 @@ export function SlotCreator({ doctorId, date, onSlotsCreated, onCancel }: SlotCr
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
-  
+
   const { errors, validate, validateField, clearErrors } = useFormValidation(createMultipleSlotsSchema);
 
   const addSlot = () => {
@@ -53,7 +53,7 @@ export function SlotCreator({ doctorId, date, onSlotsCreated, onCancel }: SlotCr
     const newSlots = [...slots];
     newSlots[index] = { ...newSlots[index], [field]: value };
     setSlots(newSlots);
-    
+
     // Clear field-specific errors when user starts typing
     const fieldKey = `${index}.${field}`;
     if (errors[fieldKey]) {
@@ -80,7 +80,7 @@ export function SlotCreator({ doctorId, date, onSlotsCreated, onCancel }: SlotCr
         setSuccess(true);
         toast.success(`Successfully created ${result.data.length} slot(s)!`);
         onSlotsCreated(result.data);
-        
+
         // Auto-close after success
         setTimeout(() => {
           onCancel();
@@ -106,7 +106,7 @@ export function SlotCreator({ doctorId, date, onSlotsCreated, onCancel }: SlotCr
 
   const getOverallErrors = (): string[] => {
     const overallErrors: string[] = [];
-    
+
     // Check for duplicate slot names
     const names = slots.map(slot => slot.slot_name.toLowerCase());
     const duplicates = names.filter((name, index) => names.indexOf(name) !== index);
@@ -119,7 +119,7 @@ export function SlotCreator({ doctorId, date, onSlotsCreated, onCancel }: SlotCr
     for (let i = 0; i < sortedSlots.length - 1; i++) {
       const current = sortedSlots[i];
       const next = sortedSlots[i + 1];
-      
+
       if (current.end_time && next.start_time && current.end_time > next.start_time) {
         overallErrors.push(`Slot "${current.slot_name}" overlaps with "${next.slot_name}"`);
       }
@@ -232,7 +232,7 @@ export function SlotCreator({ doctorId, date, onSlotsCreated, onCancel }: SlotCr
                   </div>
                 </div>
               </div>
-              
+
               <div>
                 <Input
                   label="Start Time"
@@ -243,7 +243,7 @@ export function SlotCreator({ doctorId, date, onSlotsCreated, onCancel }: SlotCr
                   disabled={loading}
                 />
               </div>
-              
+
               <div>
                 <Input
                   label="End Time"
@@ -254,7 +254,7 @@ export function SlotCreator({ doctorId, date, onSlotsCreated, onCancel }: SlotCr
                   disabled={loading}
                 />
               </div>
-              
+
               <div>
                 <Input
                   label="Max Capacity"
@@ -291,7 +291,7 @@ export function SlotCreator({ doctorId, date, onSlotsCreated, onCancel }: SlotCr
                 <div className="flex items-center gap-4 text-sm text-gray-600">
                   <div className="flex items-center gap-1">
                     <Clock className="h-4 w-4" />
-                    <span>{slot.start_time} - {slot.end_time}</span>
+                    <span>{(() => { const fmt = (t: string) => { const [h, m] = t.split(':').map(Number); return `${h % 12 || 12}:${String(m).padStart(2, '0')} ${h >= 12 ? 'PM' : 'AM'}`; }; return `${fmt(slot.start_time)} - ${fmt(slot.end_time)}`; })()}</span>
                   </div>
                   <div className="flex items-center gap-1">
                     <Users className="h-4 w-4" />
@@ -309,8 +309,8 @@ export function SlotCreator({ doctorId, date, onSlotsCreated, onCancel }: SlotCr
       </div>
 
       <div className="flex justify-end gap-3 pt-4 border-t">
-        <Button 
-          variant="outline" 
+        <Button
+          variant="outline"
           onClick={() => setSlots([{
             slot_name: "",
             start_time: "",
@@ -321,8 +321,8 @@ export function SlotCreator({ doctorId, date, onSlotsCreated, onCancel }: SlotCr
         >
           Clear All
         </Button>
-        <Button 
-          onClick={handleSubmit} 
+        <Button
+          onClick={handleSubmit}
           disabled={loading || slots.length === 0 || success}
           className="min-w-[120px]"
         >

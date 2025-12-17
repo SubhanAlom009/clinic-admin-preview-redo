@@ -1,17 +1,32 @@
 /**
  * WhatsApp Business API Service for Clinic Admin
  * Handles sending WhatsApp notifications to patients
+ * 
+ * TEMPLATE NAMES (Must match Meta Business Suite):
+ * - appointment_request_received
+ * - inclinic_appointment_confirmed
+ * - video_consultation_confirmed (with CTA button)
+ * - appointment_rescheduled
+ * - appointment_cancelled
+ * - appointment_delay
+ * - appointment_reminder_1day
+ * - video_call_starting_soon (with CTA button)
  */
 
 const WHATSAPP_API_URL = "https://graph.facebook.com/v22.0";
 const PHONE_NUMBER_ID = import.meta.env.VITE_WHATSAPP_PHONE_NUMBER_ID;
 const ACCESS_TOKEN = import.meta.env.VITE_WHATSAPP_ACCESS_TOKEN;
 
+// Patient app base URL for video calls
+const PATIENT_APP_BASE_URL = import.meta.env.VITE_PATIENT_APP_URL || "https://patients-webapp.vercel.app";
+
 interface WhatsAppTemplateComponent {
   type: string;
+  sub_type?: string;
+  index?: number;
   parameters: Array<{
     type: string;
-    text: string;
+    text?: string;
   }>;
 }
 
@@ -36,30 +51,16 @@ export class WhatsAppService {
     message: Omit<WhatsAppMessage, "messaging_product">
   ): Promise<{ success: boolean; error?: string; data?: unknown }> {
     console.log("🔔 [CLINIC-ADMIN WhatsApp] sendWhatsAppMessage triggered");
-    console.log(
-      "📱 [CLINIC-ADMIN WhatsApp] Message details:",
-      JSON.stringify(message, null, 2)
-    );
-    console.log(
-      "� [CLINIC-ADMIN WhatsApp] Recipient phone number (TO field):",
-      message.to
-    );
-    console.log("�🔑 [CLINIC-ADMIN WhatsApp] Environment check:", {
-      hasPhoneNumberId: !!PHONE_NUMBER_ID,
-      hasAccessToken: !!ACCESS_TOKEN,
-      phoneNumberId: PHONE_NUMBER_ID || "NOT SET",
-    });
+    console.log("📱 [CLINIC-ADMIN WhatsApp] Template:", message.template.name);
+    console.log("📞 [CLINIC-ADMIN WhatsApp] Recipient:", message.to);
 
     if (!PHONE_NUMBER_ID || !ACCESS_TOKEN) {
-      console.warn(
-        "❌ [CLINIC-ADMIN WhatsApp] WhatsApp credentials not configured. Skipping notification."
-      );
+      console.warn("❌ [CLINIC-ADMIN WhatsApp] Credentials not configured");
       return { success: false, error: "WhatsApp not configured" };
     }
 
     try {
       const url = `${WHATSAPP_API_URL}/${PHONE_NUMBER_ID}/messages`;
-      console.log("🌐 [CLINIC-ADMIN WhatsApp] Sending request to:", url);
 
       const response = await fetch(url, {
         method: "POST",
@@ -74,21 +75,13 @@ export class WhatsAppService {
       });
 
       const data = await response.json();
-      console.log(
-        "📡 [CLINIC-ADMIN WhatsApp] Response status:",
-        response.status,
-        response.statusText
-      );
 
       if (!response.ok) {
         console.error("❌ [CLINIC-ADMIN WhatsApp] API error:", data);
         return { success: false, error: data.error?.message || "API error" };
       }
 
-      console.log(
-        "✅ [CLINIC-ADMIN WhatsApp] Message sent successfully:",
-        data
-      );
+      console.log("✅ [CLINIC-ADMIN WhatsApp] Message sent successfully");
       return { success: true, data };
     } catch (error) {
       console.error("❌ [CLINIC-ADMIN WhatsApp] Send error:", error);
@@ -103,66 +96,75 @@ export class WhatsAppService {
    * Format phone number for WhatsApp (ensure country code)
    */
   private static formatPhone(phone: string): string {
-    // Remove all non-digits
     let cleaned = phone.replace(/[^0-9]/g, "");
-
-    // If the number doesn't start with country code (91 for India), add it
     if (cleaned.length === 10 && !cleaned.startsWith("91")) {
       cleaned = "91" + cleaned;
     }
-
-    console.log(
-      "📱 [formatPhone] Input:",
-      phone,
-      "→ Output:",
-      cleaned,
-      `(${cleaned.length} digits)`
-    );
-
     return cleaned;
   }
 
-  /**
-   * Send appointment confirmation when admin approves request
-   */
-  static async sendAppointmentConfirmed(data: {
+  // ============================================================================
+  // 1. IN-CLINIC APPOINTMENT CONFIRMED
+  // Trigger: When admin approves an in-clinic appointment
+  // ============================================================================
+
+  static async sendInClinicAppointmentConfirmed(data: {
+    phone: string;
+    patientName: string;
+    doctorName: string;
+    clinicName: string;
+    clinicAddress: string;
+    appointmentDate: string;
+    appointmentTime: string;
+  }): Promise<{ success: boolean; error?: string }> {
+    console.log("🏥 [CLINIC-ADMIN] Sending in-clinic appointment confirmation");
+
+    return await this.sendWhatsAppMessage({
+      to: this.formatPhone(data.phone),
+      type: "template",
+      template: {
+        name: "inclinic_appointment_confirmed",
+        language: { code: "en" },
+        components: [
+          {
+            type: "body",
+            parameters: [
+              { type: "text", text: data.patientName },
+              { type: "text", text: data.doctorName },
+              { type: "text", text: data.clinicName },
+              { type: "text", text: data.clinicAddress },
+              { type: "text", text: data.appointmentDate },
+              { type: "text", text: data.appointmentTime },
+            ],
+          },
+        ],
+      },
+    });
+  }
+
+  // ============================================================================
+  // 2. VIDEO CONSULTATION CONFIRMED (with CTA Button)
+  // Trigger: When admin approves a video consultation
+  // ============================================================================
+
+  static async sendVideoConsultationConfirmed(data: {
     phone: string;
     patientName: string;
     doctorName: string;
     clinicName: string;
     appointmentDate: string;
     appointmentTime: string;
+    feeAmount: string;
+    videoCallLinkSuffix: string; // e.g., "abhicure/room?callId=xxx&userId=xxx"
   }): Promise<{ success: boolean; error?: string }> {
-    console.log(
-      "🚀 [CLINIC-ADMIN] sendAppointmentConfirmed called with:",
-      data
-    );
-
-    const formattedPhone = this.formatPhone(data.phone);
-    console.log(
-      "📞 [CLINIC-ADMIN] Phone formatted:",
-      data.phone,
-      "→",
-      formattedPhone
-    );
-    console.log(
-      "🔍 [CLINIC-ADMIN] Exact phone being sent to WhatsApp API:",
-      formattedPhone
-    );
-    console.log(
-      "📏 [CLINIC-ADMIN] Phone length:",
-      formattedPhone.length,
-      "characters"
-    );
+    console.log("� [CLINIC-ADMIN] Sending video consultation confirmation");
 
     return await this.sendWhatsAppMessage({
-      to: formattedPhone,
+      to: this.formatPhone(data.phone),
       type: "template",
       template: {
-        name: "appointment_confirmed",
-        language: {
-          code: "en",
-        },
+        name: "video_consultation_confirmed",
+        language: { code: "en" },
         components: [
           {
             type: "body",
@@ -172,40 +174,15 @@ export class WhatsAppService {
               { type: "text", text: data.clinicName },
               { type: "text", text: data.appointmentDate },
               { type: "text", text: data.appointmentTime },
+              { type: "text", text: data.feeAmount },
             ],
           },
-        ],
-      },
-    });
-  }
-
-  /**
-   * Send appointment cancellation notification
-   */
-  static async sendAppointmentCancelled(data: {
-    phone: string;
-    patientName: string;
-    appointmentDate: string;
-    appointmentTime: string;
-    reason?: string;
-  }): Promise<{ success: boolean; error?: string }> {
-    const formattedPhone = this.formatPhone(data.phone);
-
-    return await this.sendWhatsAppMessage({
-      to: formattedPhone,
-      type: "template",
-      template: {
-        name: "appointment_cancelled",
-        language: {
-          code: "en",
-        },
-        components: [
           {
-            type: "body",
+            type: "button",
+            sub_type: "url",
+            index: 0,
             parameters: [
-              { type: "text", text: data.patientName },
-              { type: "text", text: data.appointmentDate },
-              { type: "text", text: data.appointmentTime },
+              { type: "text", text: data.videoCallLinkSuffix },
             ],
           },
         ],
@@ -213,26 +190,26 @@ export class WhatsAppService {
     });
   }
 
-  /**
-   * Send appointment reminder (1 day before)
-   */
-  static async sendAppointmentReminder(data: {
+  // ============================================================================
+  // 3. APPOINTMENT CANCELLED
+  // Trigger: When admin cancels an appointment
+  // ============================================================================
+
+  static async sendAppointmentCancelled(data: {
     phone: string;
     patientName: string;
     doctorName: string;
     appointmentDate: string;
     appointmentTime: string;
   }): Promise<{ success: boolean; error?: string }> {
-    const formattedPhone = this.formatPhone(data.phone);
+    console.log("❌ [CLINIC-ADMIN] Sending appointment cancellation");
 
     return await this.sendWhatsAppMessage({
-      to: formattedPhone,
+      to: this.formatPhone(data.phone),
       type: "template",
       template: {
-        name: "appointment_reminder",
-        language: {
-          code: "en",
-        },
+        name: "appointment_cancelled",
+        language: { code: "en" },
         components: [
           {
             type: "body",
@@ -248,10 +225,12 @@ export class WhatsAppService {
     });
   }
 
-  /**
-   * Send reschedule confirmation
-   */
-  static async sendRescheduleConfirmed(data: {
+  // ============================================================================
+  // 4. APPOINTMENT RESCHEDULED
+  // Trigger: When admin reschedules an appointment
+  // ============================================================================
+
+  static async sendAppointmentRescheduled(data: {
     phone: string;
     patientName: string;
     doctorName: string;
@@ -259,27 +238,27 @@ export class WhatsAppService {
     oldTime: string;
     newDate: string;
     newTime: string;
+    clinicName: string;
   }): Promise<{ success: boolean; error?: string }> {
-    const formattedPhone = this.formatPhone(data.phone);
+    console.log("📅 [CLINIC-ADMIN] Sending appointment rescheduled notification");
 
-    // Use appointment_confirmed template with new date/time
     return await this.sendWhatsAppMessage({
-      to: formattedPhone,
+      to: this.formatPhone(data.phone),
       type: "template",
       template: {
-        name: "appointment_confirmed",
-        language: {
-          code: "en",
-        },
+        name: "appointment_rescheduled",
+        language: { code: "en" },
         components: [
           {
             type: "body",
             parameters: [
               { type: "text", text: data.patientName },
               { type: "text", text: data.doctorName },
-              { type: "text", text: "Rescheduled Appointment" },
+              { type: "text", text: data.oldDate },
+              { type: "text", text: data.oldTime },
               { type: "text", text: data.newDate },
               { type: "text", text: data.newTime },
+              { type: "text", text: data.clinicName },
             ],
           },
         ],
@@ -287,30 +266,182 @@ export class WhatsAppService {
     });
   }
 
-  /**
-   * Send OTP for verification
-   */
-  static async sendOTP(
-    phone: string,
-    otp: string
-  ): Promise<{ success: boolean; error?: string }> {
-    const formattedPhone = this.formatPhone(phone);
+  // ============================================================================
+  // 5. APPOINTMENT DELAY
+  // Trigger: When doctor is running late
+  // ============================================================================
+
+  static async sendAppointmentDelay(data: {
+    phone: string;
+    patientName: string;
+    doctorName: string;
+    delayMinutes: string;
+    newExpectedTime: string;
+    clinicName: string;
+  }): Promise<{ success: boolean; error?: string }> {
+    console.log("⏰ [CLINIC-ADMIN] Sending appointment delay notification");
 
     return await this.sendWhatsAppMessage({
-      to: formattedPhone,
+      to: this.formatPhone(data.phone),
       type: "template",
       template: {
-        name: "otp_verification",
-        language: {
-          code: "en",
-        },
+        name: "appointment_delay",
+        language: { code: "en" },
         components: [
           {
             type: "body",
-            parameters: [{ type: "text", text: otp }],
+            parameters: [
+              { type: "text", text: data.patientName },
+              { type: "text", text: data.doctorName },
+              { type: "text", text: data.delayMinutes },
+              { type: "text", text: data.newExpectedTime },
+              { type: "text", text: data.clinicName },
+            ],
           },
         ],
       },
+    });
+  }
+
+  // ============================================================================
+  // 6. APPOINTMENT REMINDER (1 Day Before)
+  // Trigger: Cron job / scheduled task
+  // ============================================================================
+
+  static async sendAppointmentReminder1Day(data: {
+    phone: string;
+    patientName: string;
+    doctorName: string;
+    clinicName: string;
+    appointmentDate: string;
+    appointmentTime: string;
+    appointmentType: "In-Clinic Visit" | "Video Consultation";
+    extraInfo: string;
+  }): Promise<{ success: boolean; error?: string }> {
+    console.log("🔔 [CLINIC-ADMIN] Sending 1-day appointment reminder");
+
+    return await this.sendWhatsAppMessage({
+      to: this.formatPhone(data.phone),
+      type: "template",
+      template: {
+        name: "appointment_reminder_1day",
+        language: { code: "en" },
+        components: [
+          {
+            type: "body",
+            parameters: [
+              { type: "text", text: data.patientName },
+              { type: "text", text: data.doctorName },
+              { type: "text", text: data.clinicName },
+              { type: "text", text: data.appointmentDate },
+              { type: "text", text: data.appointmentTime },
+              { type: "text", text: data.appointmentType },
+              { type: "text", text: data.extraInfo },
+            ],
+          },
+        ],
+      },
+    });
+  }
+
+  // ============================================================================
+  // 7. VIDEO CALL STARTING SOON (with CTA Button)
+  // Trigger: 15 minutes before video consultation
+  // ============================================================================
+
+  static async sendVideoCallStartingSoon(data: {
+    phone: string;
+    patientName: string;
+    doctorName: string;
+    appointmentTime: string;
+    videoCallLinkSuffix: string;
+  }): Promise<{ success: boolean; error?: string }> {
+    console.log("📱 [CLINIC-ADMIN] Sending video call starting soon notification");
+
+    return await this.sendWhatsAppMessage({
+      to: this.formatPhone(data.phone),
+      type: "template",
+      template: {
+        name: "video_call_starting_soon",
+        language: { code: "en" },
+        components: [
+          {
+            type: "body",
+            parameters: [
+              { type: "text", text: data.patientName },
+              { type: "text", text: data.doctorName },
+              { type: "text", text: data.appointmentTime },
+            ],
+          },
+          {
+            type: "button",
+            sub_type: "url",
+            index: 0,
+            parameters: [
+              { type: "text", text: data.videoCallLinkSuffix },
+            ],
+          },
+        ],
+      },
+    });
+  }
+
+  // ============================================================================
+  // HELPER: Generate Video Call Link Suffix for CTA
+  // ============================================================================
+
+  static generateVideoCallLink(data: {
+    clinicSlug: string;
+    callId: string;
+    patientId: string;
+    patientName: string;
+  }): { fullUrl: string; ctaSuffix: string } {
+    const params = new URLSearchParams({
+      callId: data.callId,
+      userId: `patient-${data.patientId}`,
+      userName: data.patientName,
+    });
+
+    const fullUrl = `${PATIENT_APP_BASE_URL}/video/${data.clinicSlug}/room?${params.toString()}`;
+    const ctaSuffix = `${data.clinicSlug}/room?${params.toString()}`;
+
+    return { fullUrl, ctaSuffix };
+  }
+
+  // ============================================================================
+  // LEGACY FUNCTIONS (for backward compatibility)
+  // ============================================================================
+
+  /** @deprecated Use sendInClinicAppointmentConfirmed instead */
+  static async sendAppointmentConfirmed(data: {
+    phone: string;
+    patientName: string;
+    doctorName: string;
+    clinicName: string;
+    appointmentDate: string;
+    appointmentTime: string;
+  }): Promise<{ success: boolean; error?: string }> {
+    console.warn("⚠️ [CLINIC-ADMIN] Using deprecated sendAppointmentConfirmed");
+    return await this.sendInClinicAppointmentConfirmed({
+      ...data,
+      clinicAddress: "Please check app for address",
+    });
+  }
+
+  /** @deprecated Use sendAppointmentReminder1Day instead */
+  static async sendAppointmentReminder(data: {
+    phone: string;
+    patientName: string;
+    doctorName: string;
+    appointmentDate: string;
+    appointmentTime: string;
+  }): Promise<{ success: boolean; error?: string }> {
+    console.warn("⚠️ [CLINIC-ADMIN] Using deprecated sendAppointmentReminder");
+    return await this.sendAppointmentReminder1Day({
+      ...data,
+      clinicName: "Our Clinic",
+      appointmentType: "In-Clinic Visit",
+      extraInfo: "",
     });
   }
 }
