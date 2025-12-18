@@ -222,8 +222,14 @@ export function QueueManagementModal({
             const displayHour = hours > 12 ? hours - 12 : hours === 0 ? 12 : hours;
             const newExpectedTime = `${displayHour}:${minutes.toString().padStart(2, "0")} ${period}`;
 
-            // Get clinic name from user context
-            const clinicName = "Our Clinic"; // You can fetch this from user context if needed
+            // Fetch actual clinic name from clinic_profiles
+            const { data: clinicProfile } = await (supabase as any)
+              .from("clinic_profiles")
+              .select("clinic_name")
+              .eq("id", user?.id)
+              .single();
+
+            const clinicName = clinicProfile?.clinic_name || "Our Clinic";
 
             console.log(`📤 Sending delay notification to ${patientName} (${patientPhone})`);
 

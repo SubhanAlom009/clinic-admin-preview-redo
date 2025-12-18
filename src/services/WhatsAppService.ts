@@ -407,41 +407,4 @@ export class WhatsAppService {
 
     return { fullUrl, ctaSuffix };
   }
-
-  // ============================================================================
-  // LEGACY FUNCTIONS (for backward compatibility)
-  // ============================================================================
-
-  /** @deprecated Use sendInClinicAppointmentConfirmed instead */
-  static async sendAppointmentConfirmed(data: {
-    phone: string;
-    patientName: string;
-    doctorName: string;
-    clinicName: string;
-    appointmentDate: string;
-    appointmentTime: string;
-  }): Promise<{ success: boolean; error?: string }> {
-    console.warn("⚠️ [CLINIC-ADMIN] Using deprecated sendAppointmentConfirmed");
-    return await this.sendInClinicAppointmentConfirmed({
-      ...data,
-      clinicAddress: "Please check app for address",
-    });
-  }
-
-  /** @deprecated Use sendAppointmentReminder1Day instead */
-  static async sendAppointmentReminder(data: {
-    phone: string;
-    patientName: string;
-    doctorName: string;
-    appointmentDate: string;
-    appointmentTime: string;
-  }): Promise<{ success: boolean; error?: string }> {
-    console.warn("⚠️ [CLINIC-ADMIN] Using deprecated sendAppointmentReminder");
-    return await this.sendAppointmentReminder1Day({
-      ...data,
-      clinicName: "Our Clinic",
-      appointmentType: "In-Clinic Visit",
-      extraInfo: "",
-    });
-  }
 }

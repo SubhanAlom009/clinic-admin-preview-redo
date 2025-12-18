@@ -740,12 +740,29 @@ export class AppointmentRequestService extends BaseService {
       // Sync the slot booking count after approval
       await this.syncSlotBookingCount((requestedSlot as any).id);
 
-      // Send WhatsApp confirmation to patient
+      // Send WhatsApp confirmation to patient - USE CORRECT TEMPLATE BASED ON TYPE
       if (requestData.patient_phone) {
         try {
           console.log(
             "🔔 [CLINIC-ADMIN] Approval successful, preparing WhatsApp notification"
           );
+
+          // Fetch clinic profile for actual clinic name and slug
+          const { data: clinicProfile, error: clinicProfileError } = await (supabase as any)
+            .from("clinic_profiles")
+            .select("clinic_name, slug")
+            .eq("id", user.id)
+            .single();
+
+          console.log("🏥 [CLINIC-ADMIN] Clinic profile fetch result:", {
+            clinicProfile,
+            error: clinicProfileError,
+            userId: user.id,
+          });
+
+          const clinicName = clinicProfile?.clinic_name || "Clinic";
+          const clinicSlug = clinicProfile?.slug || "clinic";
+          const clinicAddress = "Please check app for address"; // Address not in clinic_profiles table
 
           const appointmentTime = convertUTCToISTTime24(
             requestData.requested_datetime
@@ -756,19 +773,52 @@ export class AppointmentRequestService extends BaseService {
             patientName: requestData.patient_name,
             doctorName:
               requestData.clinic_doctor?.doctor_profile?.full_name || "Doctor",
+            clinicName: clinicName,
             appointmentDate: requestedDateString,
             appointmentTime: appointmentTime,
+            isVideoConsultation,
           });
 
-          const result = await WhatsAppService.sendAppointmentConfirmed({
-            phone: requestData.patient_phone,
-            patientName: requestData.patient_name,
-            doctorName:
-              requestData.clinic_doctor?.doctor_profile?.full_name || "Doctor",
-            clinicName: "Clinic", // You can fetch clinic name if needed
-            appointmentDate: requestedDateString,
-            appointmentTime: appointmentTime,
-          });
+          let result;
+
+          if (isVideoConsultation) {
+            // For video consultations, generate video call link and send video template
+            const callId = `vc-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
+            const videoCallData = WhatsAppService.generateVideoCallLink({
+              clinicSlug: clinicSlug,
+              callId: callId,
+              patientId: patientProfile.id,
+              patientName: requestData.patient_name,
+            });
+
+            console.log("📹 [CLINIC-ADMIN] Sending VIDEO CONSULTATION confirmation with link:", videoCallData.fullUrl);
+
+            result = await WhatsAppService.sendVideoConsultationConfirmed({
+              phone: requestData.patient_phone,
+              patientName: requestData.patient_name,
+              doctorName:
+                requestData.clinic_doctor?.doctor_profile?.full_name || "Doctor",
+              clinicName: clinicName,
+              appointmentDate: requestedDateString,
+              appointmentTime: appointmentTime,
+              feeAmount: requestData.paid_amount?.toString() || "0",
+              videoCallLinkSuffix: videoCallData.ctaSuffix,
+            });
+          } else {
+            // For in-clinic appointments, send in-clinic confirmation template
+            console.log("🏥 [CLINIC-ADMIN] Sending IN-CLINIC confirmation");
+
+            result = await WhatsAppService.sendInClinicAppointmentConfirmed({
+              phone: requestData.patient_phone,
+              patientName: requestData.patient_name,
+              doctorName:
+                requestData.clinic_doctor?.doctor_profile?.full_name || "Doctor",
+              clinicName: clinicName,
+              clinicAddress: clinicAddress,
+              appointmentDate: requestedDateString,
+              appointmentTime: appointmentTime,
+            });
+          }
 
           if (result.success) {
             console.log(
