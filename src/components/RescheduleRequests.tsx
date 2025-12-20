@@ -277,11 +277,15 @@ export function RescheduleRequests({
       // Update the original appointment using AppointmentService for slot-based rescheduling
       // Use the patient's requested datetime, not the slot start time
       // The requested_datetime is already in the correct format from the patient webapp
+      // Clear any delay info and mark as rescheduled
       const updateResult = await AppointmentService.updateAppointment(selectedRequest.appointment_id, {
         doctor_slot_id: selectedSlot.id,
         appointment_datetime: selectedRequest.requested_datetime,
         slot_booking_order: selectedSlot.current_bookings + 1,
         status: "scheduled" as any,
+        delay_minutes: null, // Clear delay when rescheduled
+        delay_reason: null, // Clear delay reason when rescheduled
+        is_rescheduled: true, // Mark as rescheduled
       });
 
       if (!updateResult.success) {

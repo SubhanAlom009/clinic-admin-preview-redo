@@ -111,6 +111,9 @@ export interface UpdateAppointmentData {
   doctor_slot_id?: string; // CHANGED: Allow rescheduling to different slot
   slot_booking_order?: number; // CHANGED: Update queue position
   service_day?: string; // DEPRECATED: For queue management
+  delay_minutes?: number | null; // Allow clearing delay
+  delay_reason?: string | null; // Allow clearing delay reason
+  is_rescheduled?: boolean; // Mark appointment as rescheduled
 }
 
 export class AppointmentService extends BaseService {
