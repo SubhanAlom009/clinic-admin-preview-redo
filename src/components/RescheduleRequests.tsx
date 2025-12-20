@@ -9,6 +9,7 @@ import {
   RefreshCw,
   Search,
   Clock,
+  Video,
 } from "lucide-react";
 import { Button } from "./ui/Button";
 import { Input } from "./ui/Input";
@@ -22,6 +23,8 @@ import { format } from "date-fns";
 import { AppointmentService } from "../services/AppointmentService";
 import { DoctorSlotService, AvailableSlot } from "../services/DoctorSlotService";
 import { SlotSelector } from "./doctorComponents/SlotSelector";
+import { WhatsAppService } from "../services/WhatsAppService";
+import { convertUTCToISTDate, convertUTCToISTTime, extractISTDateForInput, createUTCFromISTInput } from "../utils/timezoneUtils";
 
 interface RescheduleRequest {
   id: string;
@@ -89,6 +92,9 @@ export function RescheduleRequests({
   const [selectedSlot, setSelectedSlot] = useState<AvailableSlot | null>(null);
   const [availableSlots, setAvailableSlots] = useState<AvailableSlot[]>([]);
   const [loadingSlots, setLoadingSlots] = useState(false);
+  const [showSuggestTime, setShowSuggestTime] = useState(false);
+  const [matchingSlot, setMatchingSlot] = useState<AvailableSlot | null>(null);
+  const [checkingSlot, setCheckingSlot] = useState(false);
   const { user } = useAuth();
 
   const fetchRequests = useCallback(async () => {
@@ -178,7 +184,7 @@ export function RescheduleRequests({
     try {
       setLoadingSlots(true);
       const result = await DoctorSlotService.getAvailableSlots(doctorId, date);
-      
+
       if (result.success && result.data) {
         setAvailableSlots(result.data);
       } else {
@@ -194,15 +200,54 @@ export function RescheduleRequests({
     }
   };
 
-  const handleApproveClick = (request: RescheduleRequest) => {
+  const handleApproveClick = async (request: RescheduleRequest) => {
     setSelectedRequest(request);
-    // Set initial date to tomorrow
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    const dateString = format(tomorrow, "yyyy-MM-dd");
-    setSelectedDate(dateString);
+    setShowSuggestTime(false);
+    setMatchingSlot(null);
     setSelectedSlot(null);
+    setSelectedDate("");
     setShowApproveModal(true);
+
+    // Auto-find a matching slot for the patient's requested time
+    if (request.requested_datetime && request.doctor_id) {
+      setCheckingSlot(true);
+      try {
+        // Use IST date for slot lookup (convert from UTC)
+        const dateString = extractISTDateForInput(request.requested_datetime);
+
+        // Fetch available slots for the requested date
+        const result = await DoctorSlotService.getAvailableSlots(request.doctor_id, dateString);
+
+        if (result.success && result.data && result.data.length > 0) {
+          // Find a slot that contains the requested time (use IST time)
+          const requestedTimeIST = convertUTCToISTTime(request.requested_datetime);
+          // Convert to 24-hour format for comparison
+          const [time, period] = requestedTimeIST.split(' ');
+          const [hours, minutes] = time.split(':');
+          let hour24 = parseInt(hours);
+          if (period?.toLowerCase() === 'pm' && hour24 !== 12) hour24 += 12;
+          if (period?.toLowerCase() === 'am' && hour24 === 12) hour24 = 0;
+          const requestedTime24 = `${hour24.toString().padStart(2, '0')}:${minutes}:00`;
+
+          const matchedSlot = result.data.find(slot =>
+            slot.start_time <= requestedTime24 && slot.end_time > requestedTime24
+          );
+
+          if (matchedSlot) {
+            setMatchingSlot(matchedSlot);
+            setSelectedSlot(matchedSlot);
+          } else {
+            // No exact match - pick first available slot
+            setMatchingSlot(result.data[0]);
+            setSelectedSlot(result.data[0]);
+          }
+        }
+      } catch (error) {
+        console.error("Error finding matching slot:", error);
+      } finally {
+        setCheckingSlot(false);
+      }
+    }
   };
 
   const handleApprove = async () => {
@@ -214,10 +259,27 @@ export function RescheduleRequests({
     try {
       setActionLoading(selectedRequest.id);
 
+      // Check if this is a video consultation
+      const isVideoConsultation = selectedRequest.appointments?.appointment_type
+        ?.toLowerCase()
+        .includes("video");
+
+      // Fetch clinic profile for notifications
+      const { data: clinicProfile } = await (supabase as any)
+        .from("clinic_profiles")
+        .select("clinic_name, slug")
+        .eq("id", user?.id)
+        .single();
+
+      const clinicName = clinicProfile?.clinic_name || "Clinic";
+      const clinicSlug = clinicProfile?.slug || "clinic";
+
       // Update the original appointment using AppointmentService for slot-based rescheduling
+      // Use the patient's requested datetime, not the slot start time
+      // The requested_datetime is already in the correct format from the patient webapp
       const updateResult = await AppointmentService.updateAppointment(selectedRequest.appointment_id, {
         doctor_slot_id: selectedSlot.id,
-        appointment_datetime: `${selectedSlot.slot_date}T${selectedSlot.start_time}Z`,
+        appointment_datetime: selectedRequest.requested_datetime,
         slot_booking_order: selectedSlot.current_bookings + 1,
         status: "scheduled" as any,
       });
@@ -238,6 +300,64 @@ export function RescheduleRequests({
         .eq("id", selectedRequest.id);
 
       if (requestError) throw requestError;
+
+      // Send WhatsApp notification
+      const patientPhone = selectedRequest.patient_profiles?.phone;
+      const patientName = selectedRequest.patient_profiles?.full_name || "Patient";
+      const doctorName = selectedRequest.appointments?.clinic_doctors?.doctor_profiles?.full_name || "Doctor";
+
+      // Format dates
+      const oldDate = format(new Date(selectedRequest.current_datetime), "yyyy-MM-dd");
+      const oldTime = format(new Date(selectedRequest.current_datetime), "HH:mm");
+      const newDate = selectedSlot.slot_date;
+      const newTime = selectedSlot.start_time.slice(0, 5);
+
+      if (patientPhone) {
+        try {
+          if (isVideoConsultation) {
+            // Generate new video call link
+            const callId = `vc-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
+            const videoCallData = WhatsAppService.generateVideoCallLink({
+              clinicSlug,
+              callId,
+              patientId: selectedRequest.patient_profile_id,
+              patientName,
+            });
+
+            console.log("📹 [CLINIC-ADMIN] Sending video reschedule notification with new link:", videoCallData.fullUrl);
+
+            await WhatsAppService.sendVideoConsultationRescheduled({
+              phone: patientPhone,
+              patientName,
+              doctorName,
+              oldDate,
+              oldTime,
+              newDate,
+              newTime,
+              clinicName,
+              videoCallLinkSuffix: videoCallData.ctaSuffix,
+            });
+          } else {
+            // In-clinic reschedule notification
+            console.log("🏥 [CLINIC-ADMIN] Sending in-clinic reschedule notification");
+
+            await WhatsAppService.sendAppointmentRescheduled({
+              phone: patientPhone,
+              patientName,
+              doctorName,
+              oldDate,
+              oldTime,
+              newDate,
+              newTime,
+              clinicName,
+            });
+          }
+          console.log("✅ [CLINIC-ADMIN] Reschedule notification sent");
+        } catch (whatsappError) {
+          console.error("❌ [CLINIC-ADMIN] WhatsApp notification failed:", whatsappError);
+          // Don't fail the approval if notification fails
+        }
+      }
 
       toast.success("Reschedule request approved successfully!");
       setShowApproveModal(false);
@@ -661,139 +781,147 @@ export function RescheduleRequests({
       >
         {selectedRequest && (
           <div className="p-6 space-y-6">
+            {/* Request Summary */}
             <div className="bg-blue-50 rounded-lg p-4">
               <h3 className="text-lg font-semibold text-blue-900 mb-3">
-                Reschedule Request Details
+                Reschedule Request
               </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+              <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
-                  <span className="font-medium text-gray-700">Patient:</span>
-                  <p className="text-gray-900">
-                    {selectedRequest.patient_profiles?.full_name}
-                  </p>
+                  <span className="font-medium text-gray-600">Patient:</span>
+                  <p className="text-gray-900 font-medium">{selectedRequest.patient_profiles?.full_name}</p>
                 </div>
                 <div>
-                  <span className="font-medium text-gray-700">Doctor:</span>
-                  <p className="text-gray-900">
-                    {selectedRequest.appointments?.clinic_doctors?.doctor_profiles?.full_name}
-                  </p>
+                  <span className="font-medium text-gray-600">Doctor:</span>
+                  <p className="text-gray-900">Dr. {selectedRequest.appointments?.clinic_doctors?.doctor_profiles?.full_name}</p>
                 </div>
-                <div>
-                  <span className="font-medium text-gray-700">Current Slot:</span>
-                  <p className="text-gray-900">
-                    {selectedRequest.appointments?.doctor_slot ? (
-                      <>
-                        {selectedRequest.appointments.doctor_slot.slot_name} on{" "}
-                        {format(
-                          new Date(selectedRequest.appointments.doctor_slot.slot_date),
-                          "MMM dd, yyyy"
-                        )}{" "}
-                        at {selectedRequest.appointments.doctor_slot.start_time}
-                      </>
-                    ) : (
-                      format(
-                        new Date(selectedRequest.current_datetime),
-                        "MMM dd, yyyy 'at' HH:mm"
-                      )
-                    )}
-                  </p>
+              </div>
+              {selectedRequest.reason && (
+                <div className="mt-3 pt-3 border-t border-blue-200">
+                  <span className="font-medium text-gray-600">Reason:</span>
+                  <p className="text-gray-900">{selectedRequest.reason}</p>
                 </div>
-                {selectedRequest.reason && (
-                  <div>
-                    <span className="font-medium text-gray-700">Reason:</span>
-                    <p className="text-gray-900">{selectedRequest.reason}</p>
+              )}
+            </div>
+
+            {/* Patient's Requested Time - Prominent Display */}
+            <div className="bg-green-50 border-2 border-green-300 rounded-lg p-5">
+              <h3 className="text-lg font-semibold text-green-900 mb-3 flex items-center gap-2">
+                <Calendar className="h-5 w-5" />
+                Patient&apos;s Requested Time
+              </h3>
+              <div className="text-2xl font-bold text-green-800 mb-2">
+                {convertUTCToISTDate(selectedRequest.requested_datetime)}
+              </div>
+              <div className="text-xl text-green-700">
+                at {convertUTCToISTTime(selectedRequest.requested_datetime)}
+              </div>
+
+              {/* Slot Availability Status */}
+              <div className="mt-4 pt-3 border-t border-green-300">
+                {checkingSlot ? (
+                  <div className="flex items-center gap-2 text-green-700">
+                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-green-600 border-t-transparent"></div>
+                    <span>Checking slot availability...</span>
+                  </div>
+                ) : matchingSlot ? (
+                  <div className="flex items-center gap-2 text-green-700">
+                    <CheckCircle className="h-5 w-5 text-green-600" />
+                    <span>
+                      <strong>Slot Available:</strong> {matchingSlot.slot_name} ({matchingSlot.start_time} - {matchingSlot.end_time})
+                    </span>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2 text-orange-700">
+                    <XCircle className="h-5 w-5 text-orange-500" />
+                    <span>No matching slot found for this time. Please suggest a different time.</span>
                   </div>
                 )}
               </div>
             </div>
 
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-gray-900">
-                Select New Time Slot
-              </h3>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Select Date *
-                </label>
-                <input
-                  type="date"
-                  value={selectedDate}
-                  onChange={(e) => {
-                    setSelectedDate(e.target.value);
-                    setSelectedSlot(null);
-                    if (selectedRequest.doctor_id) {
-                      fetchAvailableSlots(e.target.value, selectedRequest.doctor_id);
-                    }
-                  }}
-                  min={format(new Date(), "yyyy-MM-dd")}
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  required
-                />
-              </div>
-
-              {selectedDate && (
+            {/* Suggest Different Time Section - Collapsible */}
+            {showSuggestTime && (
+              <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                <h4 className="font-semibold text-gray-900 mb-3">Suggest Different Time</h4>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Select Time Slot *
+                    Select Date
                   </label>
-                  {loadingSlots ? (
-                    <div className="text-center py-4">
-                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-                      <p className="text-sm text-gray-500 mt-2">Loading available slots...</p>
-                    </div>
-                  ) : availableSlots.length > 0 ? (
-                    <SlotSelector
-                      doctorId={selectedRequest.doctor_id}
-                      date={selectedDate}
-                      onSlotSelect={(slot) => setSelectedSlot(slot)}
-                      selectedSlot={selectedSlot?.id}
-                    />
-                  ) : (
-                    <div className="text-center py-4 bg-gray-50 rounded-md">
-                      <p className="text-sm text-gray-500">No slots available for this date</p>
-                      <p className="text-xs text-gray-400 mt-1">Please select a different date</p>
-                    </div>
-                  )}
-                  {!selectedSlot && selectedDate && availableSlots.length > 0 && (
-                    <p className="mt-1 text-sm text-red-600">Please select a time slot</p>
-                  )}
+                  <input
+                    type="date"
+                    value={selectedDate}
+                    onChange={(e) => {
+                      setSelectedDate(e.target.value);
+                      setSelectedSlot(null);
+                      if (selectedRequest.doctor_id) {
+                        fetchAvailableSlots(e.target.value, selectedRequest.doctor_id);
+                      }
+                    }}
+                    min={format(new Date(), "yyyy-MM-dd")}
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
                 </div>
-              )}
 
-              {selectedSlot && (
-                <div className="bg-green-50 border border-green-200 rounded-md p-3">
-                  <h4 className="text-sm font-medium text-green-900">Selected Slot</h4>
-                  <p className="text-sm text-green-700">
-                    {selectedSlot.slot_name} - {selectedSlot.start_time} to {selectedSlot.end_time}
-                  </p>
-                  <p className="text-xs text-green-600">
-                    Available capacity: {selectedSlot.available_capacity}/{selectedSlot.max_capacity}
-                  </p>
-                </div>
-              )}
-            </div>
+                {selectedDate && (
+                  <div className="mt-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Select Time Slot
+                    </label>
+                    {loadingSlots ? (
+                      <div className="text-center py-4">
+                        <div className="animate-spin rounded-full h-6 w-6 border-2 border-blue-600 border-t-transparent mx-auto"></div>
+                        <p className="text-sm text-gray-500 mt-2">Loading slots...</p>
+                      </div>
+                    ) : availableSlots.length > 0 ? (
+                      <SlotSelector
+                        doctorId={selectedRequest.doctor_id}
+                        date={selectedDate}
+                        onSlotSelect={(slot) => setSelectedSlot(slot)}
+                        selectedSlot={selectedSlot?.id}
+                      />
+                    ) : (
+                      <div className="text-center py-4 bg-white rounded-md border">
+                        <p className="text-sm text-gray-500">No slots available for this date</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
 
-            <div className="flex justify-end space-x-3 pt-4 border-t">
+            {/* Action Buttons */}
+            <div className="flex justify-between items-center pt-4 border-t">
               <Button
                 variant="outline"
-                onClick={() => {
-                  setShowApproveModal(false);
-                  setSelectedRequest(null);
-                  setSelectedSlot(null);
-                  setSelectedDate("");
-                }}
+                onClick={() => setShowSuggestTime(!showSuggestTime)}
+                className="text-gray-600"
               >
-                Cancel
+                {showSuggestTime ? "Hide Options" : "Suggest Different Time"}
               </Button>
-              <Button
-                onClick={handleApprove}
-                disabled={!selectedSlot || actionLoading !== null || loadingSlots}
-                className="bg-green-600 hover:bg-green-700"
-              >
-                <CheckCircle className="h-4 w-4 mr-1" />
-                Approve Request
-              </Button>
+
+              <div className="flex gap-3">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setShowApproveModal(false);
+                    setSelectedRequest(null);
+                    setSelectedSlot(null);
+                    setSelectedDate("");
+                    setShowSuggestTime(false);
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleApprove}
+                  disabled={!selectedSlot || actionLoading !== null || checkingSlot}
+                  className="bg-green-600 hover:bg-green-700"
+                >
+                  <CheckCircle className="h-4 w-4 mr-1" />
+                  {matchingSlot && !showSuggestTime ? "Approve Request" : "Approve with Selected Slot"}
+                </Button>
+              </div>
             </div>
           </div>
         )}

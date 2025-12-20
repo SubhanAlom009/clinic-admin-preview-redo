@@ -23,6 +23,8 @@ import {
 import { SlotSelector } from "../doctorComponents/SlotSelector";
 import { createUTCFromISTInput } from "../../utils/timezoneUtils";
 import { toast } from "sonner";
+import { WhatsAppService } from "../../services/WhatsAppService";
+import { Video } from "lucide-react";
 
 interface RescheduleAppointmentModalProps {
   isOpen: boolean;
@@ -248,14 +250,78 @@ export function RescheduleAppointmentModal({
         user_id: user.id,
         type: "appointment",
         title: "Appointment Rescheduled",
-        message: `Appointment for ${
-          appointment.clinic_patient?.patient_profile?.full_name
-        } has been rescheduled to ${selectedSlot.slot_name} on ${format(
-          new Date(selectedSlot.slot_date),
-          "MMM d, yyyy"
-        )} at ${selectedSlot.start_time}`,
+        message: `Appointment for ${appointment.clinic_patient?.patient_profile?.full_name
+          } has been rescheduled to ${selectedSlot.slot_name} on ${format(
+            new Date(selectedSlot.slot_date),
+            "MMM d, yyyy"
+          )} at ${selectedSlot.start_time}`,
         priority: "normal",
       });
+
+      // Send WhatsApp notification
+      const isVideoConsultation = appointment.appointment_type
+        ?.toLowerCase()
+        .includes("video");
+
+      // Fetch clinic profile
+      const { data: clinicProfile } = await (supabase as any)
+        .from("clinic_profiles")
+        .select("clinic_name, slug")
+        .eq("id", user.id)
+        .single();
+
+      const clinicName = clinicProfile?.clinic_name || "Clinic";
+      const clinicSlug = clinicProfile?.slug || "clinic";
+      const patientPhone = appointment.clinic_patient?.patient_profile?.phone;
+      const patientName = appointment.clinic_patient?.patient_profile?.full_name || "Patient";
+      const doctorName = appointment.clinic_doctor?.doctor_profile?.full_name || "Doctor";
+      const oldDate = format(new Date(appointment.appointment_datetime), "yyyy-MM-dd");
+      const oldTime = format(new Date(appointment.appointment_datetime), "HH:mm");
+      const newDate = selectedSlot.slot_date;
+      const newTime = selectedSlot.start_time.slice(0, 5);
+
+      if (patientPhone) {
+        try {
+          if (isVideoConsultation) {
+            // Generate new video call link
+            const callId = `vc-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
+            const videoCallData = WhatsAppService.generateVideoCallLink({
+              clinicSlug,
+              callId,
+              patientId: appointment.clinic_patient?.patient_profile?.id || "",
+              patientName,
+            });
+
+            console.log("📹 [CLINIC-ADMIN] Sending video reschedule notification");
+            await WhatsAppService.sendVideoConsultationRescheduled({
+              phone: patientPhone,
+              patientName,
+              doctorName,
+              oldDate,
+              oldTime,
+              newDate,
+              newTime,
+              clinicName,
+              videoCallLinkSuffix: videoCallData.ctaSuffix,
+            });
+          } else {
+            console.log("🏥 [CLINIC-ADMIN] Sending in-clinic reschedule notification");
+            await WhatsAppService.sendAppointmentRescheduled({
+              phone: patientPhone,
+              patientName,
+              doctorName,
+              oldDate,
+              oldTime,
+              newDate,
+              newTime,
+              clinicName,
+            });
+          }
+          console.log("✅ [CLINIC-ADMIN] Reschedule notification sent");
+        } catch (whatsappError) {
+          console.error("❌ [CLINIC-ADMIN] WhatsApp notification failed:", whatsappError);
+        }
+      }
 
       toast.success("Appointment rescheduled successfully!");
       onClose();
@@ -434,11 +500,10 @@ export function RescheduleAppointmentModal({
               onChange={handleInputChange}
               onBlur={() => handleFieldBlur("notes")}
               rows={3}
-              className={`block w-full px-3 py-2 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                errors.notes
-                  ? "border-red-300 focus:ring-red-500"
-                  : "border-gray-300"
-              }`}
+              className={`block w-full px-3 py-2 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${errors.notes
+                ? "border-red-300 focus:ring-red-500"
+                : "border-gray-300"
+                }`}
               placeholder="Add any notes about the reschedule (optional)"
             />
             {errors.notes && (

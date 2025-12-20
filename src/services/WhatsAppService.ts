@@ -267,6 +267,56 @@ export class WhatsAppService {
   }
 
   // ============================================================================
+  // 4B. VIDEO CONSULTATION RESCHEDULED (with new video call link)
+  // Trigger: When admin reschedules a video consultation
+  // ============================================================================
+
+  static async sendVideoConsultationRescheduled(data: {
+    phone: string;
+    patientName: string;
+    doctorName: string;
+    oldDate: string;
+    oldTime: string;
+    newDate: string;
+    newTime: string;
+    clinicName: string;
+    videoCallLinkSuffix: string;
+  }): Promise<{ success: boolean; error?: string }> {
+    console.log("📹 [CLINIC-ADMIN] Sending video consultation rescheduled notification");
+
+    return await this.sendWhatsAppMessage({
+      to: this.formatPhone(data.phone),
+      type: "template",
+      template: {
+        name: "video_consultation_rescheduled",
+        language: { code: "en" },
+        components: [
+          {
+            type: "body",
+            parameters: [
+              { type: "text", text: data.patientName },
+              { type: "text", text: data.doctorName },
+              { type: "text", text: data.oldDate },
+              { type: "text", text: data.oldTime },
+              { type: "text", text: data.newDate },
+              { type: "text", text: data.newTime },
+              { type: "text", text: data.clinicName },
+            ],
+          },
+          {
+            type: "button",
+            sub_type: "url",
+            index: 0,
+            parameters: [
+              { type: "text", text: data.videoCallLinkSuffix },
+            ],
+          },
+        ],
+      },
+    });
+  }
+
+  // ============================================================================
   // 5. APPOINTMENT DELAY
   // Trigger: When doctor is running late
   // ============================================================================
