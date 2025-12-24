@@ -490,22 +490,25 @@ export function ManageDoctor() {
               <div>
                 <p className="text-sm font-medium text-gray-600">Patient Rating</p>
                 <div className="flex items-center gap-2 mt-1">
-                  {doctor.rating ? (
+                  {doctor.clinic_doctor?.rating ? (
                     <>
                       <span className="text-2xl font-bold text-gray-900">
-                        {doctor.rating.toFixed(1)}
+                        {doctor.clinic_doctor.rating.toFixed(1)}
                       </span>
                       <div className="flex">
                         {[...Array(5)].map((_, i) => (
                           <Star
                             key={i}
-                            className={`w-4 h-4 ${i < Math.floor(doctor.rating || 0)
-                                ? "fill-amber-400 text-amber-400"
-                                : "fill-gray-200 text-gray-200"
+                            className={`w-4 h-4 ${i < Math.floor(doctor.clinic_doctor?.rating || 0)
+                              ? "fill-amber-400 text-amber-400"
+                              : "fill-gray-200 text-gray-200"
                               }`}
                           />
                         ))}
                       </div>
+                      <span className="text-sm text-gray-500">
+                        ({doctor.clinic_doctor.total_reviews || 0} reviews)
+                      </span>
                     </>
                   ) : (
                     <span className="text-lg text-gray-400">No ratings yet</span>

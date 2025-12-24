@@ -55,7 +55,6 @@ export interface DoctorProfileWithClinic {
   consultation_fee?: number;
   languages?: string[]; // ✅ Changed from languages_spoken to match DB
   bio?: string;
-  rating?: number; // Average patient rating (1-5)
   created_at: string;
   updated_at: string;
 
@@ -72,6 +71,8 @@ export interface DoctorProfileWithClinic {
     default_slot_duration?: number;
     max_patients_per_slot?: number;
     slot_creation_enabled?: boolean;
+    rating?: number | null;
+    total_reviews?: number | null;
     created_at: string;
   };
 }
@@ -268,6 +269,8 @@ export class DoctorProfileService extends BaseService {
           default_slot_duration: cd.default_slot_duration,
           max_patients_per_slot: cd.max_patients_per_slot,
           slot_creation_enabled: cd.slot_creation_enabled,
+          rating: cd.rating,
+          total_reviews: cd.total_reviews,
           created_at: cd.created_at,
         },
       }));
@@ -333,6 +336,8 @@ export class DoctorProfileService extends BaseService {
             default_slot_duration,
             max_patients_per_slot,
             slot_creation_enabled,
+            rating,
+            total_reviews,
             created_at
           )
         `

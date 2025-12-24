@@ -252,14 +252,14 @@ export function Doctors() {
                         : "—"}
                     </td>
                     <td className="px-4 py-3 align-top">
-                      {doctor.rating ? (
+                      {doctor.clinic_doctor?.rating ? (
                         <div className="flex items-center gap-1">
-                          <span className="text-sm font-medium text-gray-900">{doctor.rating.toFixed(1)}</span>
+                          <span className="text-sm font-medium text-gray-900">{doctor.clinic_doctor.rating.toFixed(1)}</span>
                           <div className="flex">
                             {[...Array(5)].map((_, i) => (
                               <Star
                                 key={i}
-                                className={`w-3 h-3 ${i < Math.floor(doctor.rating || 0) ? "fill-amber-400 text-amber-400" : "fill-gray-200 text-gray-200"}`}
+                                className={`w-3 h-3 ${i < Math.floor(doctor.clinic_doctor?.rating || 0) ? "fill-amber-400 text-amber-400" : "fill-gray-200 text-gray-200"}`}
                               />
                             ))}
                           </div>
