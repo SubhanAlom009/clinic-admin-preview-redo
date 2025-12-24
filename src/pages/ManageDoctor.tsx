@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { DoctorProfileService } from "../services/DoctorProfileService";
+import { ReviewService, PatientReview } from "../services/ReviewService";
 import { Button } from "../components/ui/Button";
 import {
   Card,
@@ -33,6 +34,7 @@ import {
   AlertTriangle,
   Video,
   Building2,
+  MessageSquare,
 } from "lucide-react";
 import { format } from "date-fns";
 
@@ -50,6 +52,8 @@ export function ManageDoctor() {
   const [isUpdating, setIsUpdating] = useState(false);
   const [isTogglingStatus, setIsTogglingStatus] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [reviews, setReviews] = useState<PatientReview[]>([]);
+  const [reviewsLoading, setReviewsLoading] = useState(false);
 
   // Form data states for each section
   const [personalFormData, setPersonalFormData] = useState({
@@ -79,8 +83,26 @@ export function ManageDoctor() {
   useEffect(() => {
     if (doctor) {
       initializeFormData();
+      // Fetch reviews for this doctor
+      if (doctor.clinic_doctor?.id) {
+        fetchDoctorReviews(doctor.clinic_doctor.id);
+      }
     }
   }, [doctor]);
+
+  const fetchDoctorReviews = async (clinicDoctorId: string) => {
+    setReviewsLoading(true);
+    try {
+      const result = await ReviewService.getDoctorReviews(clinicDoctorId);
+      if (result.success && result.data) {
+        setReviews(result.data);
+      }
+    } catch (error) {
+      console.error("Error fetching reviews:", error);
+    } finally {
+      setReviewsLoading(false);
+    }
+  };
 
   const fetchDoctor = async () => {
     if (!id) return;
@@ -1295,6 +1317,90 @@ export function ManageDoctor() {
                     <Plus className="h-4 w-4 mr-2" />
                     Create First Slots
                   </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Patient Reviews Section */}
+        <div className="mt-8">
+          <Card className="shadow-md border-0">
+            <CardHeader className="bg-gradient-to-r from-amber-50 to-orange-50 border-b">
+              <CardTitle className="flex items-center justify-between">
+                <div className="flex items-center text-lg font-semibold text-gray-900">
+                  <MessageSquare className="h-5 w-5 mr-2 text-amber-600" />
+                  Patient Reviews
+                  {reviews.length > 0 && (
+                    <span className="ml-2 px-2 py-0.5 bg-amber-100 text-amber-700 text-sm rounded-full">
+                      {reviews.length}
+                    </span>
+                  )}
+                </div>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-6">
+              {reviewsLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amber-600"></div>
+                </div>
+              ) : reviews.length > 0 ? (
+                <div className="space-y-4 max-h-96 overflow-y-auto">
+                  {reviews.map((review) => (
+                    <div
+                      key={review.id}
+                      className="bg-gray-50 rounded-lg p-4 border border-gray-100"
+                    >
+                      <div className="flex items-start justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          <div className="w-8 h-8 bg-amber-100 rounded-full flex items-center justify-center">
+                            <span className="text-sm font-semibold text-amber-700">
+                              {review.patient_name?.charAt(0) || "A"}
+                            </span>
+                          </div>
+                          <div>
+                            <p className="font-medium text-gray-900 text-sm">
+                              {review.patient_name || "Anonymous"}
+                            </p>
+                            <p className="text-xs text-gray-500">
+                              {format(new Date(review.appointment_datetime), "MMM dd, yyyy")}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          {[...Array(5)].map((_, i) => (
+                            <Star
+                              key={i}
+                              className={`w-4 h-4 ${i < (review.patient_rating || 0)
+                                  ? "fill-amber-400 text-amber-400"
+                                  : "fill-gray-200 text-gray-200"
+                                }`}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                      <p className="text-gray-700 text-sm leading-relaxed">
+                        "{review.patient_feedback}"
+                      </p>
+                      {review.appointment_type && (
+                        <span className="inline-block mt-2 px-2 py-0.5 bg-blue-50 text-blue-600 text-xs rounded">
+                          {review.appointment_type}
+                        </span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <MessageSquare className="h-8 w-8 text-gray-400" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-1">
+                    No reviews yet
+                  </h3>
+                  <p className="text-gray-500 text-sm">
+                    Patient reviews will appear here after appointments.
+                  </p>
                 </div>
               )}
             </CardContent>
