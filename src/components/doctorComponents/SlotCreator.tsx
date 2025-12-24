@@ -76,7 +76,7 @@ export function SlotCreator({ doctorId, date, onSlotsCreated, onCancel }: SlotCr
     setLoading(true);
     try {
       const result = await DoctorSlotService.createSlots(doctorId, date, slots);
-      if (result.success) {
+      if (result.success && result.data) {
         setSuccess(true);
         toast.success(`Successfully created ${result.data.length} slot(s)!`);
         onSlotsCreated(result.data);

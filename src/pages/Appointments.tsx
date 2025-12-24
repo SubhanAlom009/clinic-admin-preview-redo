@@ -27,6 +27,7 @@ import { AppointmentService } from "../services/AppointmentService";
 import { useAuth } from "../hooks/useAuth";
 import type { AppointmentWithRelations } from "../services/AppointmentService";
 import { capitalizeWords } from "../utils/textUtils";
+import { isVideoAppointment } from "../utils/appointmentUtils";
 import { format } from "date-fns";
 import { supabase } from "../lib/supabase";
 
@@ -39,6 +40,7 @@ export function Appointments() {
   >([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
+  const [slotTypeFilter, setSlotTypeFilter] = useState<"" | "in-clinic" | "video">("");
   const [viewMode, setViewMode] = useState<"list" | "calendar">("list");
   const [activeTab, setActiveTab] = useState<"appointments" | "queue">(
     "appointments"
@@ -117,11 +119,19 @@ export function Appointments() {
       );
     }
 
+    // Filter by slot type
+    if (slotTypeFilter) {
+      filtered = filtered.filter((appointment) => {
+        const isVideo = isVideoAppointment(appointment);
+        return slotTypeFilter === 'video' ? isVideo : !isVideo;
+      });
+    }
+
     // Keep the original order from AppointmentService (already sorted by created_at desc)
     // Don't re-sort here to avoid conflicts with service-level sorting
 
     setFilteredAppointments(filtered);
-  }, [searchTerm, statusFilter, appointments]);
+  }, [searchTerm, statusFilter, slotTypeFilter, appointments]);
 
   // local optimistic update helper after modal actions
   const applyLocalPatch = (
@@ -231,7 +241,7 @@ export function Appointments() {
           {/* Search and Filter for Appointments */}
           <Card>
             <CardContent className="py-4">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div className="relative md:col-span-2">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
                   <Input
@@ -241,6 +251,17 @@ export function Appointments() {
                     className="pl-10"
                   />
                 </div>
+                <Select
+                  label=""
+                  name="slotTypeFilter"
+                  value={slotTypeFilter}
+                  onChange={(e) => setSlotTypeFilter(e.target.value as "" | "in-clinic" | "video")}
+                  options={[
+                    { value: "", label: "All Types" },
+                    { value: "in-clinic", label: "In-Clinic" },
+                    { value: "video", label: "Video" },
+                  ]}
+                />
                 <Select
                   label=""
                   name="statusFilter"
@@ -359,8 +380,16 @@ export function Appointments() {
                           new Date(appointment.appointment_datetime) <
                           new Date();
 
+                        const slotType = (appointment.doctor_slot as any)?.slot_type;
+
                         return (
-                          <tr key={appointment.id} className="hover:bg-gray-50">
+                          <tr
+                            key={appointment.id}
+                            className={`hover:bg-opacity-80 ${slotType === 'video'
+                              ? 'bg-purple-50 hover:bg-purple-100'
+                              : 'bg-blue-50 hover:bg-blue-100'
+                              }`}
+                          >
                             <td className="px-4 py-3 text-sm text-gray-600">
                               {index + 1}
                             </td>
@@ -388,7 +417,7 @@ export function Appointments() {
                                         ?.patient_profile?.phone
                                     }
                                   </div>
-                                  {appointment.queue_position && (
+                                  {appointment.queue_position && !isVideoAppointment(appointment) && (
                                     <div className="text-xs text-gray-400">
                                       Queue #{appointment.queue_position}
                                     </div>
@@ -516,7 +545,9 @@ export function Appointments() {
                             </td>
 
                             <td className="px-4 py-3 text-sm text-gray-700">
-                              {typeof appointment.queue_position ===
+                              {isVideoAppointment(appointment) ? (
+                                <span className="text-gray-400">-</span>
+                              ) : typeof appointment.queue_position ===
                                 "number" ? (
                                 <div>
                                   <div className="font-medium">
@@ -548,6 +579,7 @@ export function Appointments() {
                                           userName: `Dr. ${appointment.clinic_doctor?.doctor_profile?.full_name || "Doctor"}`,
                                           patientName: patientName,
                                           patientSymptoms: symptoms,
+                                          appointmentId: appointment.id,
                                         });
                                         const link = `${window.location.origin}/admin/video-room?${params.toString()}`;
                                         navigator.clipboard.writeText(link);

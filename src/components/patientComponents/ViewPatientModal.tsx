@@ -72,29 +72,32 @@ export function ViewPatientModal({
   // Helper function to extract emergency contact as string
   const getEmergencyContact = () => {
     const emergencyContact = patient.emergency_contact;
-    
+
     // Handle different types of emergency_contact data
     if (!emergencyContact) return "—";
-    
+
     // If it's a string, return it directly
     if (typeof emergencyContact === 'string') {
       return emergencyContact;
     }
-    
+
     // If it's an object, try to extract phone number
     if (typeof emergencyContact === 'object') {
+      // Cast to a record type to access dynamic properties
+      const ec = emergencyContact as Record<string, unknown>;
+
       // Handle different possible structures
-      if (emergencyContact.phone) return emergencyContact.phone;
-      if (emergencyContact.number) return emergencyContact.number;
-      if (emergencyContact.contact) return emergencyContact.contact;
-      
+      if (ec.phone) return String(ec.phone);
+      if (ec.number) return String(ec.number);
+      if (ec.contact) return String(ec.contact);
+
       // If it's an empty object, return dash
-      if (Object.keys(emergencyContact).length === 0) return "—";
-      
+      if (Object.keys(ec).length === 0) return "—";
+
       // If we can't extract a meaningful value, return dash
       return "—";
     }
-    
+
     return "—";
   };
 

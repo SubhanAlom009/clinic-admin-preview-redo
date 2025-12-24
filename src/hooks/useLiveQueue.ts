@@ -2,10 +2,29 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "../lib/supabase";
 import { useAuth } from "./useAuth";
-import type { Appointment } from "../types";
 import { AppointmentStatus } from "../constants";
+import { filterInClinicAppointments } from "../utils/appointmentUtils";
 
-export interface QueueAppointment extends Appointment {
+// Complete QueueAppointment interface with all needed properties
+export interface QueueAppointment {
+  id: string;
+  clinic_doctor_id: string;
+  clinic_patient_id: string;
+  doctor_slot_id?: string;
+  appointment_datetime: string;
+  status: string;
+  queue_position?: number;
+  symptoms?: string;
+  reason?: string;
+  duration_minutes: number;
+  checked_in_at?: string;
+  actual_start_time?: string;
+  actual_end_time?: string;
+  estimated_start_time?: string;
+  appointment_type?: string;
+  emergency_status?: boolean;
+  created_at?: string;
+  updated_at?: string;
   clinic_patient?: {
     id: string;
     patient_profile: {
@@ -24,7 +43,14 @@ export interface QueueAppointment extends Appointment {
       primary_specialization: string;
     };
   };
-  //Computed fields
+  doctor_slot?: {
+    id: string;
+    slot_name: string;
+    start_time: string;
+    end_time: string;
+    slot_type?: string;
+  };
+  // Computed fields (added by the hook)
   waitingTime?: number;
   estimatedDelay?: number;
   priority?: "normal" | "urgent" | "emergency";
@@ -74,6 +100,9 @@ export const useLiveQueue = (doctorId: string, serviceDay: string) => {
             doctor_profile:doctor_profiles!doctor_profile_id(
               id, full_name, phone, primary_specialization
             )
+          ),
+          doctor_slot:doctor_slots!doctor_slot_id(
+            id, slot_name, slot_type
           )
         `
         )
@@ -85,7 +114,10 @@ export const useLiveQueue = (doctorId: string, serviceDay: string) => {
 
       if (fetchError) throw fetchError;
 
-      const enhancedQueue = (data || []).map((appointment) => ({
+      // Filter out video appointments - only show in-clinic in queue
+      const inClinicData = filterInClinicAppointments(data || []);
+
+      const enhancedQueue = inClinicData.map((appointment) => ({
         ...(appointment as any),
         waitingTime: calculateWaitingTime(appointment),
         estimatedDelay: calculateEstimatedDelay(appointment),

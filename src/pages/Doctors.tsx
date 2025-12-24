@@ -1,12 +1,12 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus, Search, Phone, UserCheck } from "lucide-react";
+import { Plus, Search, Phone, UserCheck, Star } from "lucide-react";
 import { Button } from "../components/ui/Button";
 import { Input } from "../components/ui/Input";
 import { Card, CardContent } from "../components/ui/Card";
 import { DoctorProfileService } from "../services/DoctorProfileService";
 import { capitalizeWords } from "../utils/textUtils";
-import type { DoctorProfileWithClinic } from "../services/DoctorProfileService"; 
+import type { DoctorProfileWithClinic } from "../services/DoctorProfileService";
 import { format } from "date-fns";
 import { useAuth } from "../hooks/useAuth";
 
@@ -206,6 +206,9 @@ export function Doctors() {
                     Experience
                   </th>
                   <th className="sticky top-0 bg-gray-50 z-10 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Rating
+                  </th>
+                  <th className="sticky top-0 bg-gray-50 z-10 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Fee
                   </th>
                   <th className="sticky top-0 bg-gray-50 z-10 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -244,9 +247,26 @@ export function Doctors() {
                       {doctor.email ?? "—"}
                     </td>
                     <td className="px-4 py-3 align-top text-sm text-gray-700">
-                      {doctor.experience_years // ✅ Fixed field name
+                      {doctor.experience_years
                         ? `${doctor.experience_years} yrs`
                         : "—"}
+                    </td>
+                    <td className="px-4 py-3 align-top">
+                      {doctor.rating ? (
+                        <div className="flex items-center gap-1">
+                          <span className="text-sm font-medium text-gray-900">{doctor.rating.toFixed(1)}</span>
+                          <div className="flex">
+                            {[...Array(5)].map((_, i) => (
+                              <Star
+                                key={i}
+                                className={`w-3 h-3 ${i < Math.floor(doctor.rating || 0) ? "fill-amber-400 text-amber-400" : "fill-gray-200 text-gray-200"}`}
+                              />
+                            ))}
+                          </div>
+                        </div>
+                      ) : (
+                        <span className="text-sm text-gray-400">—</span>
+                      )}
                     </td>
                     <td className="px-4 py-3 align-top text-sm text-green-600">
                       {doctor.consultation_fee && doctor.consultation_fee > 0

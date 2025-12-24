@@ -9,6 +9,7 @@ export function VideoRoomPage() {
     const callId = searchParams.get("callId");
     const userId = searchParams.get("userId") || `doctor-${Date.now()}`;
     const userName = searchParams.get("userName") || "Doctor";
+    const appointmentId = searchParams.get("appointmentId") || undefined;
 
     // Patient info for sidebar
     const patientName = searchParams.get("patientName") || "Patient";
@@ -38,6 +39,7 @@ export function VideoRoomPage() {
             userName={userName}
             patientName={patientName}
             patientSymptoms={patientSymptoms}
+            appointmentId={appointmentId}
             onLeave={() => navigate("/admin/appointments")}
         />
     );

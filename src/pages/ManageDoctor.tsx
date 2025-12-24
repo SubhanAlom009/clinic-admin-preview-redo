@@ -31,6 +31,8 @@ import {
   FileText,
   Power,
   AlertTriangle,
+  Video,
+  Building2,
 } from "lucide-react";
 import { format } from "date-fns";
 
@@ -367,8 +369,8 @@ export function ManageDoctor() {
                   </h1>
                   <span
                     className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${doctor.clinic_doctor?.is_active
-                        ? "bg-blue-100 text-blue-800 border border-blue-200"
-                        : "bg-gray-100 text-gray-600 border border-gray-200"
+                      ? "bg-blue-100 text-blue-800 border border-blue-200"
+                      : "bg-gray-100 text-gray-600 border border-gray-200"
                       }`}
                   >
                     {doctor.clinic_doctor?.is_active ? "Active" : "Inactive"}
@@ -418,8 +420,8 @@ export function ManageDoctor() {
                 variant="outline"
                 onClick={() => setShowToggleModal(true)}
                 className={`px-6 py-2 rounded-lg font-medium transition-all duration-200 ${doctor.clinic_doctor?.is_active
-                    ? "text-orange-600 border-orange-200 hover:bg-orange-50"
-                    : "text-green-600 border-green-200 hover:bg-green-50"
+                  ? "text-orange-600 border-orange-200 hover:bg-orange-50"
+                  : "text-green-600 border-green-200 hover:bg-green-50"
                   }`}
               >
                 <Power className="h-4 w-4 mr-2" />
@@ -478,12 +480,48 @@ export function ManageDoctor() {
                 </p>
               </div>
               <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                <Star className="h-6 w-6 text-blue-600" />
+                <Clock className="h-6 w-6 text-blue-600" />
               </div>
             </div>
           </div>
 
           <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Patient Rating</p>
+                <div className="flex items-center gap-2 mt-1">
+                  {doctor.rating ? (
+                    <>
+                      <span className="text-2xl font-bold text-gray-900">
+                        {doctor.rating.toFixed(1)}
+                      </span>
+                      <div className="flex">
+                        {[...Array(5)].map((_, i) => (
+                          <Star
+                            key={i}
+                            className={`w-4 h-4 ${i < Math.floor(doctor.rating || 0)
+                                ? "fill-amber-400 text-amber-400"
+                                : "fill-gray-200 text-gray-200"
+                              }`}
+                          />
+                        ))}
+                      </div>
+                    </>
+                  ) : (
+                    <span className="text-lg text-gray-400">No ratings yet</span>
+                  )}
+                </div>
+              </div>
+              <div className="w-12 h-12 bg-amber-100 rounded-lg flex items-center justify-center">
+                <Star className="h-6 w-6 text-amber-500" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Consultation Fee Card - Below the grid */}
+        <div className="mb-8">
+          <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200 max-w-xs">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">
@@ -497,8 +535,8 @@ export function ManageDoctor() {
                       : "Not set"}
                 </p>
               </div>
-              <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                <TrendingUp className="h-6 w-6 text-blue-600" />
+              <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                <TrendingUp className="h-6 w-6 text-green-600" />
               </div>
             </div>
           </div>
@@ -1159,6 +1197,9 @@ export function ManageDoctor() {
                             Slot Name
                           </th>
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Type
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                             Time
                           </th>
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -1177,6 +1218,19 @@ export function ManageDoctor() {
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                               {slot.slot_name}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              {slot.slot_type === 'video' ? (
+                                <span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium bg-purple-100 text-purple-700 rounded-full">
+                                  <Video className="h-3 w-3" />
+                                  Video
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium bg-blue-100 text-blue-700 rounded-full">
+                                  <Building2 className="h-3 w-3" />
+                                  In-Clinic
+                                </span>
+                              )}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                               {(() => {
@@ -1197,7 +1251,7 @@ export function ManageDoctor() {
                                     className="bg-blue-600 h-2 rounded-full"
                                     style={{
                                       width: `${(slot.current_bookings /
-                                          slot.max_capacity) *
+                                        slot.max_capacity) *
                                         100
                                         }%`,
                                     }}
@@ -1251,14 +1305,14 @@ export function ManageDoctor() {
               <div className="flex items-center space-x-3 mb-4">
                 <div
                   className={`w-12 h-12 rounded-full flex items-center justify-center ${doctor.clinic_doctor?.is_active
-                      ? "bg-orange-100"
-                      : "bg-green-100"
+                    ? "bg-orange-100"
+                    : "bg-green-100"
                     }`}
                 >
                   <Power
                     className={`h-6 w-6 ${doctor.clinic_doctor?.is_active
-                        ? "text-orange-600"
-                        : "text-green-600"
+                      ? "text-orange-600"
+                      : "text-green-600"
                       }`}
                   />
                 </div>
@@ -1359,8 +1413,8 @@ export function ManageDoctor() {
                   onClick={handleToggleActiveStatus}
                   disabled={isTogglingStatus}
                   className={`flex-1 ${doctor.clinic_doctor?.is_active
-                      ? "bg-orange-600 hover:bg-orange-700"
-                      : "bg-green-600 hover:bg-green-700"
+                    ? "bg-orange-600 hover:bg-orange-700"
+                    : "bg-green-600 hover:bg-green-700"
                     } disabled:opacity-50 disabled:cursor-not-allowed`}
                 >
                   {isTogglingStatus ? (

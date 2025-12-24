@@ -10,6 +10,7 @@ import "@stream-io/video-react-sdk/dist/css/styles.css";
 import { StreamService } from "../../services/StreamService";
 import { HealthcareControls } from "./HealthcareControls";
 import { ParticipantTile } from "./ParticipantTile";
+import { ConsultationSidebar } from "./ConsultationSidebar";
 
 interface VideoRoomProps {
     callId: string;
@@ -17,10 +18,17 @@ interface VideoRoomProps {
     userName: string;
     patientName?: string;
     patientSymptoms?: string;
+    appointmentId?: string;
     onLeave?: () => void;
 }
 
-function DoctorDashboardLayout({ onLeave, callId, patientName, patientSymptoms }: { onLeave?: () => void, callId?: string, patientName?: string, patientSymptoms?: string }) {
+function DoctorDashboardLayout({ onLeave, callId, patientName, patientSymptoms, appointmentId }: {
+    onLeave?: () => void,
+    callId?: string,
+    patientName?: string,
+    patientSymptoms?: string,
+    appointmentId?: string
+}) {
     const { useRemoteParticipants, useLocalParticipant, useParticipants } = useCallStateHooks();
     const remoteParticipants = useRemoteParticipants();
     const localParticipant = useLocalParticipant();
@@ -152,34 +160,22 @@ function DoctorDashboardLayout({ onLeave, callId, patientName, patientSymptoms }
                 ${showSidebar ? "lg:w-80 lg:opacity-100" : "lg:w-0 lg:opacity-0 lg:overflow-hidden lg:border-l-0"}
             `}>
                 <div className="flex flex-col h-full">
-                    <div className="p-6 border-b border-gray-700 flex justify-between items-center">
-                        <div>
-                            <h3 className="text-white font-semibold text-lg">Patient Information</h3>
-                            <p className="text-gray-400 text-sm">Session Details</p>
-                            <p className="text-gray-500 text-[10px] font-mono mt-1">ID: {callId?.slice(-6)}</p>
-                        </div>
-                        <button
-                            onClick={() => setShowSidebar(false)}
-                            className="lg:hidden p-2 text-gray-400 hover:text-white"
-                        >
-                            ✕
-                        </button>
-                    </div>
+                    {/* Close button for mobile */}
+                    <button
+                        onClick={() => setShowSidebar(false)}
+                        className="lg:hidden absolute top-4 right-4 p-2 text-gray-400 hover:text-white z-10"
+                    >
+                        ✕
+                    </button>
 
-                    <div className="p-6 space-y-6 overflow-y-auto flex-1">
-                        <div>
-                            <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-1">Name</label>
-                            <p className="text-white text-lg font-medium">{patientName || "Unknown Patient"}</p>
-                        </div>
-                        <div>
-                            <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-1">Symptoms</label>
-                            <p className="text-gray-300">{patientSymptoms || "No symptoms provided"}</p>
-                        </div>
-                        <div>
-                            <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-1">Appointment Type</label>
-                            <p className="text-gray-400 text-sm">Video Consultation</p>
-                        </div>
-                    </div>
+                    {/* Consultation Sidebar */}
+                    <ConsultationSidebar
+                        appointmentId={appointmentId}
+                        patientName={patientName || "Unknown Patient"}
+                        patientSymptoms={patientSymptoms || "Not provided"}
+                        callId={callId}
+                        onComplete={onLeave}
+                    />
                 </div>
             </div>
 
@@ -194,7 +190,7 @@ function DoctorDashboardLayout({ onLeave, callId, patientName, patientSymptoms }
     );
 }
 
-export function VideoRoom({ callId, userId, userName, patientName, patientSymptoms, onLeave }: VideoRoomProps) {
+export function VideoRoom({ callId, userId, userName, patientName, patientSymptoms, appointmentId, onLeave }: VideoRoomProps) {
     const [client, setClient] = useState<StreamVideoClient | null>(null);
     const [call, setCall] = useState<Call | null>(null);
     const [loading, setLoading] = useState(true);
@@ -300,7 +296,13 @@ export function VideoRoom({ callId, userId, userName, patientName, patientSympto
     return (
         <StreamVideo client={client}>
             <StreamCall call={call}>
-                <DoctorDashboardLayout onLeave={handleLeave} callId={callId} patientName={patientName} patientSymptoms={patientSymptoms} />
+                <DoctorDashboardLayout
+                    onLeave={handleLeave}
+                    callId={callId}
+                    patientName={patientName}
+                    patientSymptoms={patientSymptoms}
+                    appointmentId={appointmentId}
+                />
             </StreamCall>
         </StreamVideo>
     );

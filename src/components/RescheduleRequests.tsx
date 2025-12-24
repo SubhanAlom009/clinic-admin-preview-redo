@@ -326,6 +326,8 @@ export function RescheduleRequests({
               callId,
               patientId: selectedRequest.patient_profile_id,
               patientName,
+              appointmentId: selectedRequest.appointment_id,
+              doctorName,
             });
 
             console.log("📹 [CLINIC-ADMIN] Sending video reschedule notification with new link:", videoCallData.fullUrl);

@@ -20,7 +20,7 @@ interface FormModalProps {
   isLoading?: boolean;
   error?: string;
   // allow one larger modal for complex forms
-  maxWidth?: "sm" | "md" | "lg" | "xl" | "2xl" | "3xl";
+  maxWidth?: "sm" | "md" | "lg" | "xl" | "2xl" | "3xl" | "4xl";
   showCancelButton?: boolean;
   submitDisabled?: boolean;
 }
@@ -54,6 +54,7 @@ export function FormModal({
     xl: "max-w-xl",
     "2xl": "max-w-2xl",
     "3xl": "max-w-3xl",
+    "4xl": "max-w-4xl",
   };
 
   return (

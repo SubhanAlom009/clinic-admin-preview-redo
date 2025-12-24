@@ -290,6 +290,8 @@ export function RescheduleAppointmentModal({
               callId,
               patientId: appointment.clinic_patient?.patient_profile?.id || "",
               patientName,
+              appointmentId: appointment.id,
+              doctorName,
             });
 
             console.log("📹 [CLINIC-ADMIN] Sending video reschedule notification");

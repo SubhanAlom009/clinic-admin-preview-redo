@@ -17,6 +17,7 @@ interface SlotFormData {
   start_time: string;
   end_time: string;
   max_capacity: number;
+  slot_type: 'in-clinic' | 'video';
 }
 
 export function SlotCreationForm({
@@ -32,6 +33,7 @@ export function SlotCreationForm({
       start_time: "",
       end_time: "",
       max_capacity: 10,
+      slot_type: 'in-clinic',
     },
   ]);
   const [isLoading, setIsLoading] = useState(false);
@@ -57,7 +59,7 @@ export function SlotCreationForm({
 
     slots.forEach((slot, index) => {
       const prefix = `slot_${index}`;
-      
+
       if (!slot.slot_name.trim()) {
         newErrors[`${prefix}_name`] = "Slot name is required";
       }
@@ -84,7 +86,7 @@ export function SlotCreationForm({
     for (let i = 0; i < sortedSlots.length - 1; i++) {
       const current = sortedSlots[i];
       const next = sortedSlots[i + 1];
-      
+
       if (current.end_time > next.start_time) {
         const currentIndex = slots.findIndex(s => s === current);
         const nextIndex = slots.findIndex(s => s === next);
@@ -101,7 +103,7 @@ export function SlotCreationForm({
     const newSlots = [...slots];
     newSlots[index] = { ...newSlots[index], [field]: value };
     setSlots(newSlots);
-    
+
     // Clear errors for this field
     const prefix = `slot_${index}`;
     const newErrors = { ...errors };
@@ -115,6 +117,7 @@ export function SlotCreationForm({
       start_time: "",
       end_time: "",
       max_capacity: 10,
+      slot_type: 'in-clinic',
     }]);
   };
 
@@ -122,7 +125,7 @@ export function SlotCreationForm({
     if (slots.length > 1) {
       const newSlots = slots.filter((_, i) => i !== index);
       setSlots(newSlots);
-      
+
       // Clear errors for removed slot
       const newErrors = { ...errors };
       Object.keys(newErrors).forEach(key => {
@@ -136,7 +139,7 @@ export function SlotCreationForm({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!validateSlots()) {
       toast.error("Please fix validation errors before creating slots");
       return;
@@ -155,10 +158,11 @@ export function SlotCreationForm({
           start_time: slot.start_time,
           end_time: slot.end_time,
           max_capacity: slot.max_capacity,
+          slot_type: slot.slot_type,
         }));
 
         const result = await DoctorSlotService.createSlotsForDate(doctorId, date, slotData);
-        
+
         if (result.success && result.data) {
           allSlots.push(...result.data);
         } else {
@@ -173,7 +177,7 @@ export function SlotCreationForm({
           }
         }
       }
-      
+
       // Show success message with details about skipped slots
       if (skippedSlots.length > 0) {
         toast.success(
@@ -183,9 +187,9 @@ export function SlotCreationForm({
       } else {
         toast.success(`Successfully created ${allSlots.length} slot(s) from ${startDate} to ${endDate}`);
       }
-      
+
       onSlotsCreated(allSlots);
-      
+
       // Reset form
       setStartDate("");
       setEndDate("");
@@ -194,6 +198,7 @@ export function SlotCreationForm({
         start_time: "",
         end_time: "",
         max_capacity: 10,
+        slot_type: 'in-clinic',
       }]);
       setErrors({});
     } catch (error) {
@@ -215,11 +220,11 @@ export function SlotCreationForm({
     const dates: string[] = [];
     const startDate = new Date(start);
     const endDate = new Date(end);
-    
+
     for (let date = new Date(startDate); date <= endDate; date.setDate(date.getDate() + 1)) {
       dates.push(date.toISOString().split('T')[0]);
     }
-    
+
     return dates;
   };
 
@@ -359,9 +364,8 @@ export function SlotCreationForm({
                     <select
                       value={slot.slot_name}
                       onChange={(e) => handleSlotChange(index, "slot_name", e.target.value)}
-                      className={`w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                        errors[`slot_${index}_name`] ? "border-red-500" : ""
-                      }`}
+                      className={`w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors[`slot_${index}_name`] ? "border-red-500" : ""
+                        }`}
                     >
                       <option value="">Select slot name</option>
                       <option value="Morning">Morning</option>
@@ -371,6 +375,21 @@ export function SlotCreationForm({
                     {errors[`slot_${index}_name`] && (
                       <p className="text-red-500 text-sm mt-1">{errors[`slot_${index}_name`]}</p>
                     )}
+                  </div>
+
+                  {/* Slot Type Selector */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Slot Type *
+                    </label>
+                    <select
+                      value={slot.slot_type}
+                      onChange={(e) => handleSlotChange(index, "slot_type", e.target.value)}
+                      className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="in-clinic">In-Clinic Consultation</option>
+                      <option value="video">Video Consultation</option>
+                    </select>
                   </div>
 
                   <div>

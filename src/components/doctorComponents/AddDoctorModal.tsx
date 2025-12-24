@@ -176,7 +176,7 @@ export function AddDoctorModal({ isOpen, onClose }: AddDoctorModalProps) {
       isLoading={loading}
       error={error}
       submitText={loading ? "Adding..." : "Add Doctor"}
-      maxWidth="max-w-4xl"
+      maxWidth="4xl"
     >
       {/* Progress indicator */}
       <div className="mb-6">
@@ -191,8 +191,7 @@ export function AddDoctorModal({ isOpen, onClose }: AddDoctorModalProps) {
                 Ready to submit
               </span>
             ) : (
-              `${Object.keys(errors).length} field${
-                Object.keys(errors).length > 1 ? "s" : ""
+              `${Object.keys(errors).length} field${Object.keys(errors).length > 1 ? "s" : ""
               } need attention`
             )}
           </span>
@@ -326,11 +325,10 @@ export function AddDoctorModal({ isOpen, onClose }: AddDoctorModalProps) {
               onChange={handleInputChange}
               onBlur={() => handleFieldBlur("qualifications")}
               rows={3}
-              className={`block w-full pl-10 pr-3 py-2 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${
-                errors.qualifications
+              className={`block w-full pl-10 pr-3 py-2 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${errors.qualifications
                   ? "border-red-300 focus:ring-red-500"
                   : "border-gray-300"
-              }`}
+                }`}
               placeholder="MBBS, MD, MRCP - List all qualifications separated by commas"
             />
           </div>
@@ -385,11 +383,10 @@ export function AddDoctorModal({ isOpen, onClose }: AddDoctorModalProps) {
             onChange={handleInputChange}
             onBlur={() => handleFieldBlur("bio")}
             rows={4}
-            className={`block w-full px-3 py-2 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${
-              errors.bio
+            className={`block w-full px-3 py-2 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${errors.bio
                 ? "border-red-300 focus:ring-red-500"
                 : "border-gray-300"
-            }`}
+              }`}
             placeholder="A brief professional summary highlighting expertise, approach to patient care, and notable achievements..."
           />
           <p className="mt-1 text-xs text-gray-500">

@@ -147,7 +147,7 @@ export class AppointmentService extends BaseService {
             )
           ),
           doctor_slot:doctor_slots(
-            id, slot_name, slot_date, start_time, end_time, max_capacity, current_bookings
+            id, slot_name, slot_date, start_time, end_time, max_capacity, current_bookings, slot_type
           )
         `
       );

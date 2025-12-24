@@ -289,13 +289,13 @@ export interface Database {
           doctor_profile_id: string | null;
           employee_id: string | null;
           role_in_clinic:
-            | "Owner"
-            | "Partner"
-            | "Senior_Consultant"
-            | "Consultant"
-            | "Junior_Doctor"
-            | "Visiting_Doctor"
-            | "Intern";
+          | "Owner"
+          | "Partner"
+          | "Senior_Consultant"
+          | "Consultant"
+          | "Junior_Doctor"
+          | "Visiting_Doctor"
+          | "Intern";
           consultation_fee: number | null;
           default_slot_duration: number | null;
           max_patients_per_slot: number | null;
@@ -309,11 +309,11 @@ export interface Database {
           can_manage_patients: boolean | null;
           admin_permissions: any | null;
           employment_type:
-            | "Full-time"
-            | "Part-time"
-            | "Visiting"
-            | "Consultant"
-            | null;
+          | "Full-time"
+          | "Part-time"
+          | "Visiting"
+          | "Consultant"
+          | null;
           employment_start_date: string;
           employment_end_date: string | null;
           is_active: boolean | null;
@@ -327,13 +327,13 @@ export interface Database {
           doctor_profile_id?: string | null;
           employee_id?: string | null;
           role_in_clinic?:
-            | "Owner"
-            | "Partner"
-            | "Senior_Consultant"
-            | "Consultant"
-            | "Junior_Doctor"
-            | "Visiting_Doctor"
-            | "Intern";
+          | "Owner"
+          | "Partner"
+          | "Senior_Consultant"
+          | "Consultant"
+          | "Junior_Doctor"
+          | "Visiting_Doctor"
+          | "Intern";
           consultation_fee?: number | null;
           default_slot_duration?: number | null;
           max_patients_per_slot?: number | null;
@@ -347,11 +347,11 @@ export interface Database {
           can_manage_patients?: boolean | null;
           admin_permissions?: any | null;
           employment_type?:
-            | "Full-time"
-            | "Part-time"
-            | "Visiting"
-            | "Consultant"
-            | null;
+          | "Full-time"
+          | "Part-time"
+          | "Visiting"
+          | "Consultant"
+          | null;
           employment_start_date?: string;
           employment_end_date?: string | null;
           is_active?: boolean | null;
@@ -362,13 +362,13 @@ export interface Database {
         Update: {
           employee_id?: string | null;
           role_in_clinic?:
-            | "Owner"
-            | "Partner"
-            | "Senior_Consultant"
-            | "Consultant"
-            | "Junior_Doctor"
-            | "Visiting_Doctor"
-            | "Intern";
+          | "Owner"
+          | "Partner"
+          | "Senior_Consultant"
+          | "Consultant"
+          | "Junior_Doctor"
+          | "Visiting_Doctor"
+          | "Intern";
           consultation_fee?: number | null;
           default_slot_duration?: number | null;
           max_patients_per_slot?: number | null;
@@ -382,11 +382,11 @@ export interface Database {
           can_manage_patients?: boolean | null;
           admin_permissions?: any | null;
           employment_type?:
-            | "Full-time"
-            | "Part-time"
-            | "Visiting"
-            | "Consultant"
-            | null;
+          | "Full-time"
+          | "Part-time"
+          | "Visiting"
+          | "Consultant"
+          | null;
           employment_end_date?: string | null;
           is_active?: boolean | null;
           updated_at?: string;
@@ -489,6 +489,7 @@ export interface Database {
           max_capacity: number;
           current_bookings: number;
           is_active: boolean;
+          slot_type: "in-clinic" | "video" | null;
           created_at: string;
           updated_at: string;
         };
@@ -502,6 +503,7 @@ export interface Database {
           max_capacity?: number;
           current_bookings?: number;
           is_active?: boolean;
+          slot_type?: "in-clinic" | "video" | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -512,6 +514,7 @@ export interface Database {
           max_capacity?: number;
           current_bookings?: number;
           is_active?: boolean;
+          slot_type?: "in-clinic" | "video" | null;
           updated_at?: string;
         };
       };
@@ -658,7 +661,10 @@ export interface Database {
           patient_email: string | null;
           clinic_id: string;
           doctor_id: string;
+          doctor_slot_id: string | null;
           requested_datetime: string;
+          assigned_appointment_time: string | null;
+          request_order: number | null;
           requested_duration: number | null;
           appointment_type: string;
           priority: "normal" | "high" | "urgent" | null;
@@ -679,7 +685,10 @@ export interface Database {
           patient_email?: string | null;
           clinic_id: string;
           doctor_id: string;
+          doctor_slot_id?: string | null;
           requested_datetime: string;
+          assigned_appointment_time?: string | null;
+          request_order?: number | null;
           requested_duration?: number | null;
           appointment_type: string;
           priority?: "normal" | "high" | "urgent" | null;
@@ -699,7 +708,10 @@ export interface Database {
           patient_email?: string | null;
           clinic_id?: string;
           doctor_id?: string;
+          doctor_slot_id?: string | null;
           requested_datetime?: string;
+          assigned_appointment_time?: string | null;
+          request_order?: number | null;
           requested_duration?: number | null;
           appointment_type?: string;
           priority?: "normal" | "high" | "urgent" | null;
@@ -793,13 +805,13 @@ export interface ClinicDoctorWithProfile {
   doctor_profile_id: string | null;
   employee_id?: string | null;
   role_in_clinic:
-    | "Owner"
-    | "Partner"
-    | "Senior_Consultant"
-    | "Consultant"
-    | "Junior_Doctor"
-    | "Visiting_Doctor"
-    | "Intern";
+  | "Owner"
+  | "Partner"
+  | "Senior_Consultant"
+  | "Consultant"
+  | "Junior_Doctor"
+  | "Visiting_Doctor"
+  | "Intern";
   consultation_fee?: number | null;
   default_consultation_duration?: number | null;
   availability_schedule?: any | null;
@@ -808,11 +820,11 @@ export interface ClinicDoctorWithProfile {
   can_manage_patients?: boolean | null;
   admin_permissions?: any | null;
   employment_type?:
-    | "Full-time"
-    | "Part-time"
-    | "Visiting"
-    | "Consultant"
-    | null;
+  | "Full-time"
+  | "Part-time"
+  | "Visiting"
+  | "Consultant"
+  | null;
   employment_start_date?: string;
   employment_end_date?: string | null;
   is_active?: boolean | null;
@@ -825,11 +837,16 @@ export interface ClinicDoctorWithProfile {
 export interface AppointmentWithRelations {
   id: string;
   user_id?: string | null;
+  clinic_doctor_id: string;
+  clinic_patient_id: string;
+  doctor_slot_id?: string | null;
   appointment_datetime: string;
   duration_minutes?: number | null;
   status?: string | null;
   appointment_type?: string | null;
   delay_minutes?: number | null;
+  delay_reason?: string | null;
+  is_rescheduled?: boolean | null;
   notes?: string | null;
   symptoms?: string | null;
   diagnosis?: string | null;
@@ -842,10 +859,22 @@ export interface AppointmentWithRelations {
   checked_in_at?: string | null;
   emergency_status?: boolean | null;
   emergency_reason?: string | null;
+  consultation_fee?: number | null;
+  slot_booking_order?: number | null;
   created_at: string;
   updated_at: string;
   clinic_patient?: ClinicPatientWithProfile | null;
   clinic_doctor?: ClinicDoctorWithProfile | null;
+  doctor_slot?: {
+    id: string;
+    slot_name: string;
+    slot_date: string;
+    start_time: string;
+    end_time: string;
+    max_capacity: number;
+    current_bookings: number;
+    slot_type?: string;
+  } | null;
 }
 
 export interface BillWithRelations {

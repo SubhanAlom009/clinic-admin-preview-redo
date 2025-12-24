@@ -15,6 +15,7 @@ export interface CreateSlotData {
   start_time: string;
   end_time: string;
   max_capacity: number;
+  slot_type?: 'in-clinic' | 'video'; // Type of slot
 }
 
 export interface UpdateSlotData {
@@ -62,27 +63,33 @@ export class DoctorSlotService extends BaseService {
         throw new Error("Doctor not found or access denied");
       }
 
-      // Check for existing slots on the same date
+      // Check for existing slots on the same date (with same slot_type)
       const { data: existingSlots, error: existingError } = await supabase
         .from("doctor_slots")
-        .select("slot_name")
+        .select("slot_name, slot_type")
         .eq("clinic_doctor_id", clinicDoctorId)
         .eq("slot_date", date)
         .eq("is_active", true);
 
       if (existingError) throw existingError;
 
-      const existingSlotNames = (existingSlots || []).map(
-        (slot) => slot.slot_name
+      // Create a set of existing slot name + type combinations
+      const existingSlotKeys = new Set(
+        (existingSlots || []).map(
+          (slot: any) => `${slot.slot_name}|${slot.slot_type || 'in-clinic'}`
+        )
       );
-      const duplicateNames = slots.filter((slot) =>
-        existingSlotNames.includes(slot.slot_name)
-      );
+
+      // Check for duplicates - same name AND same type
+      const duplicateNames = slots.filter((slot) => {
+        const slotKey = `${slot.slot_name}|${slot.slot_type || 'in-clinic'}`;
+        return existingSlotKeys.has(slotKey);
+      });
 
       if (duplicateNames.length > 0) {
         throw new Error(
-          `Slots with these names already exist: ${duplicateNames
-            .map((s) => s.slot_name)
+          `Slots with these names already exist for the same type: ${duplicateNames
+            .map((s) => `${s.slot_name} (${s.slot_type || 'in-clinic'})`)
             .join(", ")}`
         );
       }
@@ -97,7 +104,8 @@ export class DoctorSlotService extends BaseService {
         max_capacity: slot.max_capacity,
         current_bookings: 0,
         is_active: true,
-      }));
+        slot_type: slot.slot_type || 'in-clinic', // Default to in-clinic
+      } as any));
 
       const { data: createdSlots, error } = await supabase
         .from("doctor_slots")
@@ -679,6 +687,7 @@ export class DoctorSlotService extends BaseService {
       startDate?: string;
       endDate?: string;
       slotName?: string;
+      slotType?: "in-clinic" | "video";
       status?: "active" | "inactive" | "all";
     },
     pagination?: { page: number; limit: number }
@@ -714,6 +723,9 @@ export class DoctorSlotService extends BaseService {
       }
       if (filters.slotName) {
         query = query.ilike("slot_name", `%${filters.slotName}%`);
+      }
+      if (filters.slotType) {
+        query = query.eq("slot_type", filters.slotType);
       }
       if (filters.status === "active") {
         query = query.eq("is_active", true);

@@ -38,7 +38,7 @@ export function SlotSelector({
     try {
       const result = await DoctorSlotService.getAvailableSlots(doctorId, date);
       if (result.success) {
-        setSlots(result.data);
+        setSlots(result.data || []);
       } else {
         setError(result.error?.message || "Failed to load slots");
         toast.error("Failed to load available slots");
@@ -166,13 +166,12 @@ export function SlotSelector({
           return (
             <Card
               key={slot.id}
-              className={`cursor-pointer transition-all duration-200 ${
-                isSelected
-                  ? "ring-2 ring-blue-500 bg-blue-50 border-blue-200"
-                  : isDisabled
+              className={`cursor-pointer transition-all duration-200 ${isSelected
+                ? "ring-2 ring-blue-500 bg-blue-50 border-blue-200"
+                : isDisabled
                   ? "opacity-50 cursor-not-allowed"
                   : "hover:shadow-md hover:border-gray-300"
-              }`}
+                }`}
               onClick={() => {
                 console.log("🎯 Card clicked for slot:", slot.slot_name);
                 handleSlotSelect(slot);
@@ -210,7 +209,7 @@ export function SlotSelector({
                       type="button"
                       size="sm"
                       className="w-full"
-                      variant={isSelected ? "default" : "outline"}
+                      variant={isSelected ? "primary" : "outline"}
                       disabled={isDisabled}
                       onClick={() => {
                         console.log(

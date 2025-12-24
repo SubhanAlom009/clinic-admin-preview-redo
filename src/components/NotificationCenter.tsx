@@ -13,7 +13,19 @@ import {
 import { supabase } from "../lib/supabase";
 import { useAuth } from "../hooks/useAuth";
 import { format, formatDistanceToNow } from "date-fns";
-import { Notification } from "../types";
+
+// Define Notification interface inline instead of importing from nonexistent types
+interface Notification {
+  id: string;
+  user_id: string;
+  title: string;
+  message: string;
+  type: string;
+  status: "read" | "unread";
+  created_at: string;
+  updated_at?: string;
+}
+
 
 interface NotificationCenterProps {
   onClose: () => void;
@@ -52,9 +64,9 @@ export function NotificationCenter({
 
   const markAsRead = async (id: string) => {
     try {
-      const { error } = await supabase
-        .from("notifications")
-        .update({ status: "read" } as any)
+      const { error } = await (supabase
+        .from("notifications") as any)
+        .update({ status: "read" })
         .eq("id", id);
       if (!error) {
         setNotifications((prev) =>
@@ -72,9 +84,9 @@ export function NotificationCenter({
   const markAllAsRead = async () => {
     if (!user) return;
     try {
-      const { error } = await supabase
-        .from("notifications")
-        .update({ status: "read" } as any)
+      const { error } = await (supabase
+        .from("notifications") as any)
+        .update({ status: "read" })
         .eq("user_id", user.id)
         .eq("status", "unread");
       if (!error) {

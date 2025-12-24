@@ -13,10 +13,24 @@ import { Card, CardContent } from "../ui/Card";
 import { supabase } from "../../lib/supabase";
 import { useAuth } from "../../hooks/useAuth";
 import { AppointmentStatus } from "../../constants";
-import type { Appointment } from "../../types";
 import { PrescriptionUploadModal } from "../appointmentComponents/PrescriptionUploadModal";
 
-type QueueAppointment = Omit<Appointment, "patient" | "doctor"> & {
+// Define QueueAppointment interface directly instead of importing from nonexistent types
+interface QueueAppointment {
+  id: string;
+  clinic_doctor_id: string;
+  clinic_patient_id: string;
+  appointment_datetime: string;
+  status: string;
+  queue_position?: number;
+  symptoms?: string;
+  notes?: string;
+  patient_checked_in?: boolean;
+  checked_in_at?: string;
+  actual_start_time?: string;
+  actual_end_time?: string;
+  created_at?: string;
+  updated_at?: string;
   clinic_patient?: {
     id: string;
     patient_profile: {
@@ -35,7 +49,7 @@ type QueueAppointment = Omit<Appointment, "patient" | "doctor"> & {
       primary_specialization: string;
     };
   } | null;
-};
+}
 
 interface Props {
   doctorId: string;
@@ -133,8 +147,8 @@ export function QueueManagement({ doctorId, selectedDate }: Props) {
         ...updates,
       };
 
-      const { error } = await supabase
-        .from("appointments")
+      const { error } = await (supabase
+        .from("appointments") as any)
         .update(updateData)
         .eq("id", id);
 
@@ -345,7 +359,7 @@ export function QueueManagement({ doctorId, selectedDate }: Props) {
                         )}`}
                       >
                         {appointment.status === AppointmentStatus.SCHEDULED &&
-                        appointment.patient_checked_in
+                          appointment.patient_checked_in
                           ? "Checked-In"
                           : appointment.status}
                       </span>

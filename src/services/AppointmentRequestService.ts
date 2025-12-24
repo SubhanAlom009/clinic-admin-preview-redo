@@ -344,8 +344,8 @@ export class AppointmentRequestService extends BaseService {
         console.log("🔍 Creating patient profile with data:", newProfileData);
 
         const { data: newPatientProfile, error: createProfileError } =
-          await supabase
-            .from("patient_profiles")
+          await (supabase
+            .from("patient_profiles") as any)
             .insert(newProfileData)
             .select("id, user_id, full_name, phone, email")
             .single();
@@ -390,12 +390,12 @@ export class AppointmentRequestService extends BaseService {
 
         patientProfile = newPatientProfile;
         console.log("✅ Created new patient profile:", {
-          id: patientProfile.id,
+          id: patientProfile!.id,
           name: newPatientProfile.full_name,
         });
       } else {
         console.log("✅ Using existing patient profile:", {
-          id: patientProfile.id,
+          id: patientProfile!.id,
         });
       }
 
@@ -404,7 +404,7 @@ export class AppointmentRequestService extends BaseService {
       // ==========================================
 
       console.log("🔍 Checking for clinic_patient record:", {
-        patient_profile_id: patientProfile.id,
+        patient_profile_id: patientProfile!.id,
         clinic_id: user.id,
       });
 
@@ -412,7 +412,7 @@ export class AppointmentRequestService extends BaseService {
         await supabase
           .from("clinic_patients")
           .select("id")
-          .eq("patient_profile_id", patientProfile.id)
+          .eq("patient_profile_id", patientProfile!.id)
           .eq("clinic_id", user.id)
           .maybeSingle();
 
@@ -434,7 +434,7 @@ export class AppointmentRequestService extends BaseService {
 
         const clinicPatientData = {
           clinic_id: user.id,
-          patient_profile_id: patientProfile.id,
+          patient_profile_id: patientProfile!.id,
           registration_source: "mobile_app" as const,
           relationship_status: "active" as const,
           first_visit_date: new Date().toISOString().split("T")[0], // Today's date in YYYY-MM-DD
@@ -443,8 +443,8 @@ export class AppointmentRequestService extends BaseService {
 
         console.log("🔍 Creating clinic_patient with data:", clinicPatientData);
 
-        const { data: newClinicPatient, error: createError } = await supabase
-          .from("clinic_patients")
+        const { data: newClinicPatient, error: createError } = await (supabase
+          .from("clinic_patients") as any)
           .insert(clinicPatientData)
           .select("id")
           .single();
@@ -463,7 +463,7 @@ export class AppointmentRequestService extends BaseService {
             const { data: existingRecord } = await supabase
               .from("clinic_patients")
               .select("id")
-              .eq("patient_profile_id", patientProfile.id)
+              .eq("patient_profile_id", patientProfile!.id)
               .eq("clinic_id", user.id)
               .maybeSingle();
 
@@ -720,14 +720,14 @@ export class AppointmentRequestService extends BaseService {
       // No need to increment again here
 
       // Update the request status
-      const { error: updateError } = await supabase
-        .from("appointment_requests")
+      const { error: updateError } = await (supabase
+        .from("appointment_requests") as any)
         .update({
           status: "approved",
           processed_by: user.id,
           processed_at: new Date().toISOString(),
           appointment_id: (appointment as any).id,
-        } as any)
+        })
         .eq("id", requestId);
 
       if (updateError) {
@@ -787,8 +787,10 @@ export class AppointmentRequestService extends BaseService {
             const videoCallData = WhatsAppService.generateVideoCallLink({
               clinicSlug: clinicSlug,
               callId: callId,
-              patientId: patientProfile.id,
+              patientId: patientProfile!.id,
               patientName: requestData.patient_name,
+              appointmentId: (appointment as any).id,
+              doctorName: requestData.clinic_doctor?.doctor_profile?.full_name || "Doctor",
             });
 
             console.log("📹 [CLINIC-ADMIN] Sending VIDEO CONSULTATION confirmation with link:", videoCallData.fullUrl);
@@ -927,14 +929,14 @@ export class AppointmentRequestService extends BaseService {
       }
 
       // Update the request status to rejected
-      const { error: updateError } = await supabase
-        .from("appointment_requests")
+      const { error: updateError } = await (supabase
+        .from("appointment_requests") as any)
         .update({
           status: "rejected",
           rejection_reason: reason,
           processed_by: user.id,
           processed_at: new Date().toISOString(),
-        } as any)
+        })
         .eq("id", requestId)
         .eq("clinic_id", user.id);
 
@@ -1029,13 +1031,13 @@ export class AppointmentRequestService extends BaseService {
         const newAssignedTime = slotStartDateTime.toISOString();
 
         // Update the request with new order and time
-        await supabase
-          .from("appointment_requests")
+        await (supabase
+          .from("appointment_requests") as any)
           .update({
             request_order: newOrder,
             assigned_appointment_time: newAssignedTime,
             updated_at: new Date().toISOString(),
-          } as any)
+          })
           .eq("id", (request as any).id);
       }
     } catch (error) {
@@ -1141,13 +1143,13 @@ export class AppointmentRequestService extends BaseService {
         const requestOrder = i;
 
         // Update the request with new order and time
-        await supabase
-          .from("appointment_requests")
+        await (supabase
+          .from("appointment_requests") as any)
           .update({
             request_order: requestOrder,
             assigned_appointment_time: assignedTime,
             updated_at: new Date().toISOString(),
-          } as any)
+          })
           .eq("id", (request as any).id);
       }
     } catch (error) {
@@ -1180,13 +1182,13 @@ export class AppointmentRequestService extends BaseService {
         .in("status", ["scheduled", "checked-in", "in-progress"]);
 
       // Count pending requests for this doctor on this date within this time range
-      const slotStart = `${slot.slot_date}T${slot.start_time}`;
-      const slotEnd = `${slot.slot_date}T${slot.end_time}`;
+      const slotStart = `${(slot as any).slot_date}T${(slot as any).start_time}`;
+      const slotEnd = `${(slot as any).slot_date}T${(slot as any).end_time}`;
 
       const { data: allPendingRequests } = await supabase
         .from("appointment_requests")
         .select("requested_datetime")
-        .eq("doctor_id", slot.clinic_doctor_id)
+        .eq("doctor_id", (slot as any).clinic_doctor_id)
         .eq("status", "pending");
 
       // Filter pending requests that fall within this slot's time range
@@ -1202,8 +1204,8 @@ export class AppointmentRequestService extends BaseService {
       const actualBookings = (activeAppointments || 0) + pendingRequestsInSlot;
 
       // Update the slot's current_bookings field
-      await supabase
-        .from("doctor_slots")
+      await (supabase
+        .from("doctor_slots") as any)
         .update({
           current_bookings: actualBookings,
           updated_at: new Date().toISOString(),

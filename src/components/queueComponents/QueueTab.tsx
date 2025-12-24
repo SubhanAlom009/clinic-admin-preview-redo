@@ -26,6 +26,7 @@ import { format } from "date-fns";
 import { supabase } from "../../lib/supabase";
 import { QueueManagementModal } from "./QueueManagementModal";
 import { PrescriptionUploadModal } from "../appointmentComponents/PrescriptionUploadModal";
+import { filterInClinicAppointments } from "../../utils/appointmentUtils";
 
 // Custom Doctor interface for queue display
 interface Doctor {
@@ -139,8 +140,17 @@ export function QueueTab() {
           "appointments"
         );
 
+        // Filter out video appointments - only show in-clinic in queue
+        const inClinicAppointments = filterInClinicAppointments(response.data);
+
+        console.log(
+          "After filtering video:",
+          inClinicAppointments.length,
+          "in-clinic appointments"
+        );
+
         // Auto-assign queue positions to appointments that don't have them
-        const dataWithPositions = response.data.map((appointment, index) => {
+        const dataWithPositions = inClinicAppointments.map((appointment, index) => {
           if (
             !appointment.queue_position &&
             appointment.status !== AppointmentStatus.COMPLETED
@@ -647,8 +657,8 @@ export function QueueTab() {
               <button
                 onClick={() => setActiveTab("active")}
                 className={`px-4 py-2 text-sm font-medium rounded-md transition-all ${activeTab === "active"
-                    ? "bg-white text-blue-600 shadow-sm"
-                    : "text-gray-600 hover:text-gray-900"
+                  ? "bg-white text-blue-600 shadow-sm"
+                  : "text-gray-600 hover:text-gray-900"
                   }`}
               >
                 Active Queue ({activeAppointments.length})
@@ -656,8 +666,8 @@ export function QueueTab() {
               <button
                 onClick={() => setActiveTab("completed")}
                 className={`px-4 py-2 text-sm font-medium rounded-md transition-all ${activeTab === "completed"
-                    ? "bg-white text-green-600 shadow-sm"
-                    : "text-gray-600 hover:text-gray-900"
+                  ? "bg-white text-green-600 shadow-sm"
+                  : "text-gray-600 hover:text-gray-900"
                   }`}
               >
                 Completed ({completedAppointments.length})

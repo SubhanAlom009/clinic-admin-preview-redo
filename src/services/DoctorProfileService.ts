@@ -55,6 +55,7 @@ export interface DoctorProfileWithClinic {
   consultation_fee?: number;
   languages?: string[]; // ✅ Changed from languages_spoken to match DB
   bio?: string;
+  rating?: number; // Average patient rating (1-5)
   created_at: string;
   updated_at: string;
 
@@ -66,6 +67,7 @@ export interface DoctorProfileWithClinic {
     role_in_clinic: string; // ✅ Matches DB field name
     consultation_fee?: number; // ✅ From clinic_doctors table
     is_active: boolean; // ✅ Matches DB
+    employment_type?: "Full-time" | "Part-time" | "Visiting" | "Consultant" | null;
     // Slot settings
     default_slot_duration?: number;
     max_patients_per_slot?: number;

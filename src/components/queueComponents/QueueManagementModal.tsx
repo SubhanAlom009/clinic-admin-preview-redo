@@ -6,10 +6,24 @@ import { Input } from "../ui/Input";
 import { Clock, UserPlus, RefreshCw, AlertTriangle } from "lucide-react";
 import { supabase } from "../../lib/supabase";
 import { useAuth } from "../../hooks/useAuth";
-import { Doctor, Patient } from "../../types";
 import { AppointmentStatus } from "../../constants";
 import { format } from "date-fns";
 import { WhatsAppService } from "../../services/WhatsAppService";
+
+// Define Doctor and Patient interfaces inline instead of importing from nonexistent types
+interface Doctor {
+  id: string;
+  name: string;
+  specialization?: string;
+}
+
+interface Patient {
+  id: string;
+  name: string;
+  phone?: string;
+  email?: string;
+  contact?: string;
+}
 
 
 interface QueueManagementModalProps {

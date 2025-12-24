@@ -445,6 +445,8 @@ export class WhatsAppService {
     callId: string;
     patientId: string;
     patientName: string;
+    appointmentId?: string;
+    doctorName?: string;
   }): { fullUrl: string; ctaSuffix: string } {
     const params = new URLSearchParams({
       callId: data.callId,
@@ -452,8 +454,17 @@ export class WhatsAppService {
       userName: data.patientName,
     });
 
-    const fullUrl = `${PATIENT_APP_BASE_URL}/video/${data.clinicSlug}/room?${params.toString()}`;
-    const ctaSuffix = `${data.clinicSlug}/room?${params.toString()}`;
+    // Add appointmentId and doctorName for rating page redirect
+    if (data.appointmentId) {
+      params.set('appointmentId', data.appointmentId);
+    }
+    if (data.doctorName) {
+      params.set('doctorName', data.doctorName);
+    }
+
+    // Use /{clinicSlug}/video/room format to match Next.js folder structure
+    const fullUrl = `${PATIENT_APP_BASE_URL}/${data.clinicSlug}/video/room?${params.toString()}`;
+    const ctaSuffix = `${data.clinicSlug}/video/room?${params.toString()}`;
 
     return { fullUrl, ctaSuffix };
   }

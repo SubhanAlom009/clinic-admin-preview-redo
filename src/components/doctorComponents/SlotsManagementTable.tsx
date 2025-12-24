@@ -13,7 +13,9 @@ import {
   CheckSquare,
   Square,
   Clock,
-  Users
+  Users,
+  Building2,
+  Video
 } from "lucide-react";
 import { format } from "date-fns";
 
@@ -35,6 +37,7 @@ interface SlotFilters {
   startDate: string;
   endDate: string;
   slotName: string;
+  slotType: 'in-clinic' | 'video' | 'all';
   status: 'active' | 'inactive' | 'all';
 }
 
@@ -56,6 +59,7 @@ export function SlotsManagementTable({
     startDate: "",
     endDate: "",
     slotName: "",
+    slotType: "all",
     status: "active",
   });
 
@@ -83,6 +87,7 @@ export function SlotsManagementTable({
           startDate: filters.startDate || undefined,
           endDate: filters.endDate || undefined,
           slotName: filters.slotName || undefined,
+          slotType: filters.slotType !== 'all' ? filters.slotType : undefined,
           status: filters.status,
         },
         {
@@ -322,6 +327,20 @@ export function SlotsManagementTable({
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
+                Slot Type
+              </label>
+              <select
+                value={filters.slotType}
+                onChange={(e) => handleFilterChange("slotType", e.target.value)}
+                className="w-full h-10 px-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="all">All Types</option>
+                <option value="in-clinic">In-Clinic</option>
+                <option value="video">Video</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
                 Status
               </label>
               <Select
@@ -384,6 +403,9 @@ export function SlotsManagementTable({
                     Slot Name
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Type
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Time Range
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -399,7 +421,13 @@ export function SlotsManagementTable({
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {slots.map((slot) => (
-                  <tr key={slot.id} className="hover:bg-gray-50">
+                  <tr
+                    key={slot.id}
+                    className={`hover:bg-opacity-80 ${(slot as any).slot_type === 'video'
+                        ? 'bg-purple-50 hover:bg-purple-100'
+                        : 'bg-blue-50 hover:bg-blue-100'
+                      }`}
+                  >
                     <td className="px-6 py-2 whitespace-nowrap">
                       <button
                         onClick={() => handleSelectSlot(slot.id)}
@@ -424,6 +452,20 @@ export function SlotsManagementTable({
                         />
                       ) : (
                         slot.slot_name
+                      )}
+                    </td>
+                    {/* Slot Type Badge */}
+                    <td className="px-6 py-2 whitespace-nowrap">
+                      {(slot as any).slot_type === 'video' ? (
+                        <span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium bg-purple-100 text-purple-700 rounded-full">
+                          <Video className="h-3 w-3" />
+                          Video
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium bg-blue-100 text-blue-700 rounded-full">
+                          <Building2 className="h-3 w-3" />
+                          In-Clinic
+                        </span>
                       )}
                     </td>
                     <td className="px-6 py-2 whitespace-nowrap text-sm text-gray-900">
@@ -462,8 +504,8 @@ export function SlotsManagementTable({
                     <td className="px-6 py-2 whitespace-nowrap">
                       <span
                         className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${slot.is_active
-                            ? "bg-green-100 text-green-800"
-                            : "bg-red-100 text-red-800"
+                          ? "bg-green-100 text-green-800"
+                          : "bg-red-100 text-red-800"
                           }`}
                       >
                         {slot.is_active ? "Active" : "Inactive"}
