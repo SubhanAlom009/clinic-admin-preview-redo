@@ -1,5 +1,5 @@
 "use client";
-import { Mic, MicOff, Video, VideoOff, PhoneOff, MonitorUp, FileText } from "lucide-react";
+import { Mic, MicOff, Video, VideoOff, PhoneOff, FileText } from "lucide-react";
 import { useCall, useCallStateHooks } from "@stream-io/video-react-sdk";
 import { useState } from "react";
 
@@ -11,10 +11,9 @@ interface HealthcareControlsProps {
 
 export function HealthcareControls({ onLeave, role, onToggleSidebar }: HealthcareControlsProps) {
     const call = useCall();
-    const { useMicrophoneState, useCameraState, useScreenShareState } = useCallStateHooks();
+    const { useMicrophoneState, useCameraState } = useCallStateHooks();
     const { isMute: isMicMuted } = useMicrophoneState();
     const { isMute: isCameraMuted } = useCameraState();
-    const { isMute: isScreenShareOff } = useScreenShareState();
 
     const [isTogglingMic, setIsTogglingMic] = useState(false);
     const [isTogglingCam, setIsTogglingCam] = useState(false);
@@ -51,18 +50,7 @@ export function HealthcareControls({ onLeave, role, onToggleSidebar }: Healthcar
         }
     };
 
-    const toggleScreenShare = async () => {
-        if (!call) return;
-        try {
-            if (isScreenShareOff) {
-                await call.screenShare.enable();
-            } else {
-                await call.screenShare.disable();
-            }
-        } catch (err) {
-            console.error("Failed to toggle screen share:", err);
-        }
-    };
+
 
     return (
         <div className="flex items-center justify-center gap-4 md:gap-6 px-6 md:px-8 py-3 md:py-4 bg-gray-800/80 backdrop-blur-md rounded-full border border-white/10 shadow-2xl">
@@ -74,8 +62,8 @@ export function HealthcareControls({ onLeave, role, onToggleSidebar }: Healthcar
                 title={isMicMuted ? "Unmute Microphone" : "Mute Microphone"}
             >
                 <div className={`w-12 h-12 md:w-14 md:h-14 rounded-full flex items-center justify-center transition-all cursor-pointer ${isMicMuted
-                        ? "bg-red-500/20 ring-2 ring-red-500/50 hover:bg-red-500/30"
-                        : "bg-gray-700 ring-1 ring-white/20 hover:bg-gray-600"
+                    ? "bg-red-500/20 ring-2 ring-red-500/50 hover:bg-red-500/30"
+                    : "bg-gray-700 ring-1 ring-white/20 hover:bg-gray-600"
                     } ${isTogglingMic ? "opacity-50" : ""}`}>
                     {isMicMuted ? <MicOff size={22} /> : <Mic size={22} />}
                 </div>
@@ -90,42 +78,26 @@ export function HealthcareControls({ onLeave, role, onToggleSidebar }: Healthcar
                 title={isCameraMuted ? "Turn On Camera" : "Turn Off Camera"}
             >
                 <div className={`w-12 h-12 md:w-14 md:h-14 rounded-full flex items-center justify-center transition-all cursor-pointer ${isCameraMuted
-                        ? "bg-red-500/20 ring-2 ring-red-500/50 hover:bg-red-500/30"
-                        : "bg-gray-700 ring-1 ring-white/20 hover:bg-gray-600"
+                    ? "bg-red-500/20 ring-2 ring-red-500/50 hover:bg-red-500/30"
+                    : "bg-gray-700 ring-1 ring-white/20 hover:bg-gray-600"
                     } ${isTogglingCam ? "opacity-50" : ""}`}>
                     {isCameraMuted ? <VideoOff size={22} /> : <Video size={22} />}
                 </div>
                 <span className="text-[10px] font-medium tracking-wide uppercase opacity-70">Cam</span>
             </button>
 
-            {/* Doctor Extras */}
+            {/* Doctor Extras - Info Button Only */}
             {role === "doctor" && (
-                <>
-                    <button
-                        onClick={toggleScreenShare}
-                        className="flex flex-col items-center gap-1 transition-all text-white"
-                        title="Share Screen"
-                    >
-                        <div className={`w-12 h-12 md:w-14 md:h-14 rounded-full flex items-center justify-center transition-all cursor-pointer ${!isScreenShareOff
-                                ? "bg-teal-500/20 ring-2 ring-teal-500/50"
-                                : "bg-gray-700 ring-1 ring-white/20 hover:bg-gray-600"
-                            }`}>
-                            <MonitorUp size={22} />
-                        </div>
-                        <span className="text-[10px] font-medium tracking-wide uppercase opacity-70">Share</span>
-                    </button>
-
-                    <button
-                        onClick={onToggleSidebar}
-                        className="flex flex-col items-center gap-1 transition-all text-white"
-                        title="Patient Info"
-                    >
-                        <div className="w-12 h-12 md:w-14 md:h-14 rounded-full bg-gray-700 ring-1 ring-white/20 hover:bg-gray-600 flex items-center justify-center cursor-pointer transition-all">
-                            <FileText size={22} />
-                        </div>
-                        <span className="text-[10px] font-medium tracking-wide uppercase opacity-70">Info</span>
-                    </button>
-                </>
+                <button
+                    onClick={onToggleSidebar}
+                    className="flex flex-col items-center gap-1 transition-all text-white"
+                    title="Patient Info"
+                >
+                    <div className="w-12 h-12 md:w-14 md:h-14 rounded-full bg-gray-700 ring-1 ring-white/20 hover:bg-gray-600 flex items-center justify-center cursor-pointer transition-all">
+                        <FileText size={22} />
+                    </div>
+                    <span className="text-[10px] font-medium tracking-wide uppercase opacity-70">Info</span>
+                </button>
             )}
 
             {/* End Call */}

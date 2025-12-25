@@ -279,8 +279,8 @@ export function ConsultationSidebar({
                 ))}
             </div>
 
-            {/* Tab Content */}
-            <div className="flex-1 p-4 overflow-y-auto">
+            {/* Tab Content - Scrollable area with hidden scrollbar */}
+            <div className="flex-1 p-4 overflow-y-auto scrollbar-hide" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
                 {activeTab === "notes" && (
                     <div className="space-y-2">
                         <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block">
@@ -291,6 +291,7 @@ export function ConsultationSidebar({
                             onChange={(e) => handleFieldChange("notes", e.target.value)}
                             placeholder="Document your consultation notes here..."
                             className="w-full h-40 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white placeholder-gray-500 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
                         />
                     </div>
                 )}
@@ -305,9 +306,13 @@ export function ConsultationSidebar({
                             <textarea
                                 value={prescription}
                                 onChange={(e) => handleFieldChange("prescription", e.target.value)}
-                                placeholder="Write prescription here...&#10;&#10;Example:&#10;1. Paracetamol 500mg - 1 tablet, 3 times daily&#10;2. Vitamin C - 1 tablet daily"
-                                className="w-full h-32 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white placeholder-gray-500 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent font-mono"
-                                disabled={prescriptionType === "file" && prescriptionFileUrl !== null}
+                                placeholder={prescriptionFileUrl ? "File uploaded - remove file to type here..." : "Write prescription here...&#10;&#10;Example:&#10;1. Paracetamol 500mg - 1 tablet, 3 times daily&#10;2. Vitamin C - 1 tablet daily"}
+                                className={`w-full h-32 border rounded-lg px-3 py-2 text-sm resize-none focus:outline-none font-mono ${prescriptionFileUrl
+                                    ? "bg-gray-900 border-gray-800 text-gray-600 cursor-not-allowed opacity-50"
+                                    : "bg-gray-800 border-gray-700 text-white placeholder-gray-500 focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                                    }`}
+                                style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+                                disabled={!!prescriptionFileUrl}
                             />
                         </div>
 
@@ -327,6 +332,7 @@ export function ConsultationSidebar({
                                 onChange={handleFileUpload}
                                 className="hidden"
                                 id="prescription-file"
+                                disabled={!!prescription.trim()}
                             />
 
                             {prescriptionFileUrl ? (
@@ -349,6 +355,14 @@ export function ConsultationSidebar({
                                     >
                                         <X className="w-4 h-4" />
                                     </button>
+                                </div>
+                            ) : prescription.trim() ? (
+                                // Disabled state when text prescription exists
+                                <div className="flex items-center justify-center gap-2 p-4 border-2 border-dashed border-gray-800 rounded-lg opacity-50 cursor-not-allowed bg-gray-900">
+                                    <Upload className="w-5 h-5 text-gray-600" />
+                                    <span className="text-sm text-gray-600">
+                                        Clear text to upload file
+                                    </span>
                                 </div>
                             ) : (
                                 <label
@@ -374,8 +388,8 @@ export function ConsultationSidebar({
                 )}
             </div>
 
-            {/* Action Buttons */}
-            <div className="p-4 border-t border-gray-700 space-y-2">
+            {/* Action Buttons - Fixed at bottom */}
+            <div className="p-4 border-t border-gray-700 space-y-2 bg-gray-900 sticky bottom-0">
                 {/* Save Button */}
                 <button
                     onClick={handleSave}
