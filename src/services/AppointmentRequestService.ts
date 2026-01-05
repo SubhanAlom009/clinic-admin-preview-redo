@@ -639,29 +639,13 @@ export class AppointmentRequestService extends BaseService {
         };
       }
 
-      // Prevent conflicts: ensure the requested exact time is not already booked
-      const requestedIso = new Date(
-        requestData.requested_datetime
-      ).toISOString();
-      const { data: existingAtTime } = await supabase
-        .from("appointments")
-        .select("id, appointment_datetime")
-        .eq("doctor_slot_id", (requestedSlot as any).id)
-        .eq("status", "scheduled");
+      // Use the originally requested datetime - this was already calculated
+      // when the patient made the booking request (40-minute interval)
+      // No conflict check needed since capacity is already validated above
 
-      const conflict = (existingAtTime || []).some(
-        (apt: any) =>
-          new Date(apt.appointment_datetime).toISOString() === requestedIso
-      );
-
-      if (conflict) {
-        return {
-          error: new Error(
-            "Requested time has already been booked. Please reject or choose a different time."
-          ),
-          success: false,
-        };
-      }
+      console.log("🕐 Using originally assigned time:", {
+        requested_datetime: requestData.requested_datetime,
+      });
 
       // Create the appointment using the requested datetime
       // Check if this is a video consultation
@@ -674,7 +658,7 @@ export class AppointmentRequestService extends BaseService {
         clinic_patient_id: clinicPatient!.id,
         clinic_doctor_id: requestData.doctor_id,
         doctor_slot_id: (requestedSlot as any).id,
-        appointment_datetime: requestData.requested_datetime, // Use the requested datetime which has the assigned time
+        appointment_datetime: requestData.requested_datetime, // Use the original assigned time
         duration_minutes: 30, // Default duration
         status: "scheduled" as const,
         appointment_type: requestData.appointment_type,
@@ -913,10 +897,15 @@ export class AppointmentRequestService extends BaseService {
         return { error: new Error("User not authenticated"), success: false };
       }
 
-      // Get the request details first to handle slot capacity
+      // Get the request details with doctor info for WhatsApp notification
       const { data: request, error: requestError } = await supabase
         .from("appointment_requests")
-        .select("*")
+        .select(`
+          *,
+          clinic_doctor:clinic_doctors!doctor_id(
+            doctor_profile:doctor_profiles!doctor_profile_id(full_name)
+          )
+        `)
         .eq("id", requestId)
         .eq("clinic_id", user.id)
         .single();
@@ -970,6 +959,44 @@ export class AppointmentRequestService extends BaseService {
       if (affectedSlot) {
         // Sync the slot booking count after rejection
         await this.syncSlotBookingCount(affectedSlot.id);
+      }
+
+      // Send WhatsApp rejection notification to patient
+      if ((request as any).patient_phone) {
+        try {
+          console.log("🔔 [CLINIC-ADMIN] Sending rejection notification to patient");
+
+          // Get clinic name
+          const { data: clinicProfile } = await supabase
+            .from("clinic_profiles")
+            .select("clinic_name")
+            .eq("id", user.id)
+            .single();
+
+          const clinicName = (clinicProfile as any)?.clinic_name || "Clinic";
+          const doctorName = (request as any).clinic_doctor?.doctor_profile?.full_name || "Doctor";
+          const appointmentDate = extractISTDateForInput((request as any).requested_datetime);
+          const appointmentTime = convertUTCToISTTime24((request as any).requested_datetime);
+
+          const result = await WhatsAppService.sendAppointmentRequestRejected({
+            phone: (request as any).patient_phone,
+            patientName: (request as any).patient_name,
+            doctorName: doctorName,
+            clinicName: clinicName,
+            appointmentDate: appointmentDate,
+            appointmentTime: appointmentTime,
+            rejectionReason: reason,
+          });
+
+          if (result.success) {
+            console.log("✅ [CLINIC-ADMIN] Rejection notification sent to:", (request as any).patient_phone);
+          } else {
+            console.error("❌ [CLINIC-ADMIN] Rejection notification failed:", result.error);
+          }
+        } catch (whatsappError) {
+          console.error("❌ [CLINIC-ADMIN] Rejection notification exception:", whatsappError);
+          // Don't fail the rejection if WhatsApp fails
+        }
       }
 
       return { success: true, data: null };

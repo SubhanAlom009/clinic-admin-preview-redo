@@ -380,13 +380,11 @@ export function Appointments() {
                           new Date(appointment.appointment_datetime) <
                           new Date();
 
-                        const slotType = (appointment.doctor_slot as any)?.slot_type;
-
                         return (
                           <tr
                             key={appointment.id}
-                            className={`hover:bg-opacity-80 ${slotType === 'video'
-                              ? 'bg-purple-50 hover:bg-purple-100'
+                            className={`hover:bg-opacity-80 ${isVideoAppointment(appointment)
+                              ? 'bg-green-50 hover:bg-green-100'
                               : 'bg-blue-50 hover:bg-blue-100'
                               }`}
                           >

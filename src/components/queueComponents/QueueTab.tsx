@@ -140,6 +140,11 @@ export function QueueTab() {
           "appointments"
         );
 
+        // DEBUG: Log each appointment's video detection fields
+        response.data.forEach((appt: any, idx: number) => {
+          console.log(`🔍 Appt ${idx}: type="${appt.appointment_type}", slot_type="${appt.doctor_slot?.slot_type}"`);
+        });
+
         // Filter out video appointments - only show in-clinic in queue
         const inClinicAppointments = filterInClinicAppointments(response.data);
 

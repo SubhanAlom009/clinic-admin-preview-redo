@@ -5,7 +5,6 @@ import {
   Phone,
   CheckCircle,
   XCircle,
-  Eye,
   RefreshCw,
   Search,
   Clock,
@@ -25,6 +24,16 @@ import { DoctorSlotService, AvailableSlot } from "../services/DoctorSlotService"
 import { SlotSelector } from "./doctorComponents/SlotSelector";
 import { WhatsAppService } from "../services/WhatsAppService";
 import { convertUTCToISTDate, convertUTCToISTTime, extractISTDateForInput, createUTCFromISTInput } from "../utils/timezoneUtils";
+
+// Helper to convert 24-hour time (HH:MM or HH:MM:SS) to 12-hour format
+const formatTime12h = (time: string): string => {
+  if (!time) return "";
+  const [h, m] = time.split(":");
+  const hour = parseInt(h);
+  const ampm = hour >= 12 ? "PM" : "AM";
+  const hour12 = hour % 12 || 12;
+  return `${hour12}:${m} ${ampm}`;
+};
 
 interface RescheduleRequest {
   id: string;
@@ -214,36 +223,52 @@ export function RescheduleRequests({
       try {
         // Use IST date for slot lookup (convert from UTC)
         const dateString = extractISTDateForInput(request.requested_datetime);
+        setSelectedDate(dateString); // Auto-fill the date picker
 
         // Fetch available slots for the requested date
         const result = await DoctorSlotService.getAvailableSlots(request.doctor_id, dateString);
 
-        if (result.success && result.data && result.data.length > 0) {
-          // Find a slot that contains the requested time (use IST time)
-          const requestedTimeIST = convertUTCToISTTime(request.requested_datetime);
-          // Convert to 24-hour format for comparison
-          const [time, period] = requestedTimeIST.split(' ');
-          const [hours, minutes] = time.split(':');
-          let hour24 = parseInt(hours);
-          if (period?.toLowerCase() === 'pm' && hour24 !== 12) hour24 += 12;
-          if (period?.toLowerCase() === 'am' && hour24 === 12) hour24 = 0;
-          const requestedTime24 = `${hour24.toString().padStart(2, '0')}:${minutes}:00`;
+        if (result.success && result.data) {
+          setAvailableSlots(result.data); // Populate available slots for the picker
 
-          const matchedSlot = result.data.find(slot =>
-            slot.start_time <= requestedTime24 && slot.end_time > requestedTime24
-          );
+          if (result.data.length > 0) {
+            // Find a slot that contains the requested time (use IST time)
+            const requestedTimeIST = convertUTCToISTTime(request.requested_datetime);
+            // Convert to 24-hour format for comparison
+            const [time, period] = requestedTimeIST.split(' ');
+            const [hours, minutes] = time.split(':');
+            let hour24 = parseInt(hours);
+            if (period?.toLowerCase() === 'pm' && hour24 !== 12) hour24 += 12;
+            if (period?.toLowerCase() === 'am' && hour24 === 12) hour24 = 0;
+            const requestedTime24 = `${hour24.toString().padStart(2, '0')}:${minutes}:00`;
 
-          if (matchedSlot) {
-            setMatchingSlot(matchedSlot);
-            setSelectedSlot(matchedSlot);
+            const matchedSlot = result.data.find(slot =>
+              slot.start_time <= requestedTime24 && slot.end_time > requestedTime24
+            );
+
+            if (matchedSlot) {
+              setMatchingSlot(matchedSlot);
+              setSelectedSlot(matchedSlot);
+            } else {
+              // No exact match - Auto-open matching panel
+              setMatchingSlot(null);
+              setSelectedSlot(null);
+              setShowSuggestTime(true);
+            }
           } else {
-            // No exact match - pick first available slot
-            setMatchingSlot(result.data[0]);
-            setSelectedSlot(result.data[0]);
+            // No slots at all
+            setMatchingSlot(null);
+            setSelectedSlot(null);
+            setShowSuggestTime(true);
           }
+        } else {
+          toast.error("Failed to load available slots");
+          setAvailableSlots([]);
+          setShowSuggestTime(true);
         }
       } catch (error) {
         console.error("Error finding matching slot:", error);
+        setShowSuggestTime(true);
       } finally {
         setCheckingSlot(false);
       }
@@ -275,12 +300,18 @@ export function RescheduleRequests({
       const clinicSlug = clinicProfile?.slug || "clinic";
 
       // Update the original appointment using AppointmentService for slot-based rescheduling
-      // Use the patient's requested datetime, not the slot start time
-      // The requested_datetime is already in the correct format from the patient webapp
-      // Clear any delay info and mark as rescheduled
+      // FIX: Calculate the new datetime from the SELECTED SLOT, not the requested time
+      // This ensures that if the admin selected a "Suggested Time", we use that time
+      // Note: slot.start_time is "HH:MM:SS" but createUTCFromISTInput expects "HH:MM"
+      const slotTimeHHMM = selectedSlot.start_time.slice(0, 5); // Extract "HH:MM" from "HH:MM:SS"
+      const newAppointmentDatetime = createUTCFromISTInput(
+        selectedSlot.slot_date,
+        slotTimeHHMM
+      );
+
       const updateResult = await AppointmentService.updateAppointment(selectedRequest.appointment_id, {
         doctor_slot_id: selectedSlot.id,
-        appointment_datetime: selectedRequest.requested_datetime,
+        appointment_datetime: newAppointmentDatetime, // Use the calculate slot time
         slot_booking_order: selectedSlot.current_bookings + 1,
         status: "scheduled" as any,
         delay_minutes: null, // Clear delay when rescheduled
@@ -560,12 +591,15 @@ export function RescheduleRequests({
                                   new Date(request.appointments.doctor_slot.slot_date),
                                   "MMM dd, yyyy"
                                 )}{" "}
-                                at {request.appointments.doctor_slot.start_time}
+                                at {format(
+                                  new Date(request.current_datetime),
+                                  "h:mm a"
+                                )}
                               </>
                             ) : (
                               format(
                                 new Date(request.current_datetime),
-                                "MMM dd, yyyy 'at' HH:mm"
+                                "MMM dd, yyyy 'at' h:mm a"
                               )
                             )}
                           </div>
@@ -576,7 +610,7 @@ export function RescheduleRequests({
                             ) : (
                               format(
                                 new Date(request.requested_datetime),
-                                "MMM dd, yyyy 'at' HH:mm"
+                                "MMM dd, yyyy 'at' h:mm a"
                               )
                             )}
                           </div>
@@ -615,16 +649,7 @@ export function RescheduleRequests({
                   </div>
 
                   <div className="flex items-center space-x-2 ml-4">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        setSelectedRequest(request);
-                        setShowDetailsModal(true);
-                      }}
-                    >
-                      <Eye className="h-4 w-4" />
-                    </Button>
+
 
                     {request.status === "pending" && (
                       <>
@@ -834,7 +859,7 @@ export function RescheduleRequests({
                   <div className="flex items-center gap-2 text-green-700">
                     <CheckCircle className="h-5 w-5 text-green-600" />
                     <span>
-                      <strong>Slot Available:</strong> {matchingSlot.slot_name} ({matchingSlot.start_time} - {matchingSlot.end_time})
+                      <strong>Slot Available:</strong> {matchingSlot.slot_name} ({formatTime12h(matchingSlot.start_time)} - {formatTime12h(matchingSlot.end_time)})
                     </span>
                   </div>
                 ) : (

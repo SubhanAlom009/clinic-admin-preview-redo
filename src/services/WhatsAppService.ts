@@ -437,6 +437,103 @@ export class WhatsAppService {
   }
 
   // ============================================================================
+  // 8. APPOINTMENT REQUEST REJECTED
+  // Trigger: When admin rejects a patient's appointment request
+  // ============================================================================
+
+  static async sendAppointmentRequestRejected(data: {
+    phone: string;
+    patientName: string;
+    doctorName: string;
+    clinicName: string;
+    appointmentDate: string;
+    appointmentTime: string;
+    rejectionReason?: string;
+  }): Promise<{ success: boolean; error?: string }> {
+    console.log("❌ [CLINIC-ADMIN] Sending appointment request rejected notification");
+
+    return await this.sendWhatsAppMessage({
+      to: this.formatPhone(data.phone),
+      type: "template",
+      template: {
+        name: "appointment_request_rejected",
+        language: { code: "en" },
+        components: [
+          {
+            type: "body",
+            parameters: [
+              { type: "text", text: data.patientName },
+              { type: "text", text: data.doctorName },
+              { type: "text", text: data.clinicName },
+              { type: "text", text: data.appointmentDate },
+              { type: "text", text: data.appointmentTime },
+              { type: "text", text: data.rejectionReason || "Schedule conflict" },
+            ],
+          },
+        ],
+      },
+    });
+  }
+
+  // ============================================================================
+  // 9. APPOINTMENT COMPLETED (with Prescription CTA Button)
+  // Trigger: When doctor completes the consultation
+  // ============================================================================
+
+  static async sendAppointmentCompleted(data: {
+    phone: string;
+    patientName: string;
+    doctorName: string;
+    clinicName: string;
+    appointmentDate: string;
+    prescriptionLinkSuffix: string; // e.g., "clinicSlug/appointments/appointmentId"
+  }): Promise<{ success: boolean; error?: string }> {
+    console.log("✅ [CLINIC-ADMIN] Sending appointment completed notification with prescription link");
+
+    return await this.sendWhatsAppMessage({
+      to: this.formatPhone(data.phone),
+      type: "template",
+      template: {
+        name: "appointment_completed",
+        language: { code: "en" },
+        components: [
+          {
+            type: "body",
+            parameters: [
+              { type: "text", text: data.patientName },
+              { type: "text", text: data.doctorName },
+              { type: "text", text: data.clinicName },
+              { type: "text", text: data.appointmentDate },
+            ],
+          },
+          {
+            type: "button",
+            sub_type: "url",
+            index: 0,
+            parameters: [
+              { type: "text", text: data.prescriptionLinkSuffix },
+            ],
+          },
+        ],
+      },
+    });
+  }
+
+  // ============================================================================
+  // HELPER: Generate Prescription Link
+  // ============================================================================
+
+  static generatePrescriptionLink(data: {
+    clinicSlug: string;
+    appointmentId: string;
+  }): { fullUrl: string; ctaSuffix: string } {
+    const fullUrl = `${PATIENT_APP_BASE_URL}/${data.clinicSlug}/appointments/${data.appointmentId}`;
+    const ctaSuffix = `${data.clinicSlug}/appointments/${data.appointmentId}`;
+
+    return { fullUrl, ctaSuffix };
+  }
+
+  // ============================================================================
   // HELPER: Generate Video Call Link Suffix for CTA
   // ============================================================================
 

@@ -730,11 +730,70 @@ export class AppointmentService extends BaseService {
     appointmentId: string,
     data: { diagnosis?: string; prescription?: string }
   ): Promise<ServiceResponse<AppointmentWithRelations>> {
-    return this.updateAppointment(appointmentId, {
+    // First update the appointment
+    const result = await this.updateAppointment(appointmentId, {
       status: AppointmentStatus.COMPLETED,
       actual_end_time: new Date().toISOString(),
       ...data,
     });
+
+    // If update was successful, send completion WhatsApp notification
+    if (result.success && result.data) {
+      try {
+        const appointment = result.data as any;
+        const patientPhone = appointment.clinic_patient?.patient_profile?.phone;
+        const patientName = appointment.clinic_patient?.patient_profile?.full_name;
+        const doctorName = appointment.clinic_doctor?.doctor_profile?.full_name;
+
+        if (patientPhone && patientName && doctorName) {
+          console.log("🔔 [CLINIC-ADMIN] Sending appointment completion notification");
+
+          // Get clinic info
+          const user = await this.getCurrentUser();
+          const { data: clinicProfile } = await supabase
+            .from("clinic_profiles")
+            .select("clinic_name, slug")
+            .eq("id", user.id)
+            .single();
+
+          const clinicName = (clinicProfile as any)?.clinic_name || "Clinic";
+          const clinicSlug = (clinicProfile as any)?.slug || "clinic";
+
+          // Extract appointment date
+          const appointmentDate = appointment.appointment_datetime
+            ? new Date(appointment.appointment_datetime).toLocaleDateString('en-IN')
+            : new Date().toLocaleDateString('en-IN');
+
+          // Generate prescription link
+          const prescriptionLink = WhatsAppService.generatePrescriptionLink({
+            clinicSlug: clinicSlug,
+            appointmentId: appointmentId,
+          });
+
+          const whatsappResult = await WhatsAppService.sendAppointmentCompleted({
+            phone: patientPhone,
+            patientName: patientName,
+            doctorName: doctorName,
+            clinicName: clinicName,
+            appointmentDate: appointmentDate,
+            prescriptionLinkSuffix: prescriptionLink.ctaSuffix,
+          });
+
+          if (whatsappResult.success) {
+            console.log("✅ [CLINIC-ADMIN] Completion notification sent to:", patientPhone);
+          } else {
+            console.error("❌ [CLINIC-ADMIN] Completion notification failed:", whatsappResult.error);
+          }
+        } else {
+          console.warn("⚠️ [CLINIC-ADMIN] Missing patient/doctor info for completion notification");
+        }
+      } catch (whatsappError) {
+        console.error("❌ [CLINIC-ADMIN] Completion notification exception:", whatsappError);
+        // Don't fail the completion if WhatsApp fails
+      }
+    }
+
+    return result;
   }
 
   static async rescheduleAppointment(

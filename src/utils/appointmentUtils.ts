@@ -16,6 +16,13 @@ export function isVideoAppointment(appointment: AppointmentWithRelations | any):
     const slotType = appointment?.doctor_slot?.slot_type;
     const appointmentType = appointment?.appointment_type?.toLowerCase() || '';
 
+    // Check appointment_type FIRST - it's more reliable
+    // If appointment_type explicitly says "in-clinic", it's NOT a video appointment
+    if (appointmentType.includes('in-clinic') || appointmentType.includes('inclinic')) {
+        return false;
+    }
+
+    // Otherwise check if it's explicitly video
     return slotType === 'video' || appointmentType.includes('video');
 }
 
