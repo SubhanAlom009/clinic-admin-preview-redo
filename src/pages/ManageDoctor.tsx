@@ -35,6 +35,10 @@ import {
   Video,
   Building2,
   MessageSquare,
+  Upload,
+  Image,
+  CheckCircle,
+  XCircle,
 } from "lucide-react";
 import { format } from "date-fns";
 
@@ -54,6 +58,11 @@ export function ManageDoctor() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [reviews, setReviews] = useState<PatientReview[]>([]);
   const [reviewsLoading, setReviewsLoading] = useState(false);
+
+  // Signature upload states
+  const [signatureFile, setSignatureFile] = useState<File | null>(null);
+  const [signatureUrl, setSignatureUrl] = useState<string | null>(null);
+  const [uploadingSignature, setUploadingSignature] = useState(false);
 
   // Form data states for each section
   const [personalFormData, setPersonalFormData] = useState({
@@ -227,6 +236,10 @@ export function ManageDoctor() {
       bio: doctor.bio || "",
       languages: doctor.languages || [],
     });
+
+    // Initialize signature URL
+    setSignatureUrl(doctor.signature_url || null);
+    setSignatureFile(null);
   };
 
   // Personal info update
@@ -270,6 +283,58 @@ export function ManageDoctor() {
       toast.error("Failed to update professional details");
     } finally {
       setIsUpdating(false);
+    }
+  };
+
+  // Handle signature upload
+  const handleSignatureUpload = async (file: File) => {
+    if (!file || !id) return;
+
+    setUploadingSignature(true);
+    try {
+      // Import supabase dynamically
+      const { supabase } = await import("../lib/supabase");
+
+      // Upload to signatures bucket
+      const fileName = `signature-${id}-${Date.now()}.png`;
+      const filePath = `signatures/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('prescriptions')
+        .upload(filePath, file, {
+          contentType: file.type,
+          upsert: true
+        });
+
+      if (uploadError) {
+        toast.error("Failed to upload signature");
+        console.error("Upload error:", uploadError);
+        return;
+      }
+
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('prescriptions')
+        .getPublicUrl(filePath);
+
+      // Update doctor profile with signature URL
+      const result = await DoctorProfileService.updateDoctorProfile(id, {
+        signature_url: publicUrl
+      });
+
+      if (result.success) {
+        setSignatureUrl(publicUrl);
+        setSignatureFile(file);
+        toast.success("Signature uploaded successfully");
+        fetchDoctor(); // Refresh data
+      } else {
+        toast.error("Failed to save signature URL");
+      }
+    } catch (error) {
+      console.error("Signature upload failed:", error);
+      toast.error("Failed to upload signature");
+    } finally {
+      setUploadingSignature(false);
     }
   };
 
@@ -964,8 +1029,67 @@ export function ManageDoctor() {
                         }
                         placeholder="Brief description of the doctor's background and expertise..."
                         className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-                        rows={4}
                       />
+                    </div>
+
+                    {/* Signature Upload */}
+                    <div className="mt-6 p-4 border border-gray-200 rounded-lg bg-gray-50">
+                      <label className="block text-sm font-medium text-gray-700 mb-3">
+                        <Image className="w-4 h-4 inline mr-2" />
+                        Digital Signature
+                      </label>
+
+                      {signatureUrl ? (
+                        <div className="space-y-3">
+                          <div className="flex items-center space-x-3">
+                            <CheckCircle className="w-5 h-5 text-green-500" />
+                            <span className="text-sm text-green-700">Signature uploaded</span>
+                          </div>
+                          <div className="border rounded-lg p-3 bg-white inline-block">
+                            <img
+                              src={signatureUrl}
+                              alt="Doctor Signature"
+                              className="max-h-16 max-w-[200px] object-contain"
+                            />
+                          </div>
+                          <label className="cursor-pointer inline-flex items-center px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
+                            <Upload className="w-4 h-4 mr-2" />
+                            Replace Signature
+                            <input
+                              type="file"
+                              accept="image/png,image/jpeg"
+                              className="hidden"
+                              onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (file) handleSignatureUpload(file);
+                              }}
+                              disabled={uploadingSignature}
+                            />
+                          </label>
+                        </div>
+                      ) : (
+                        <div className="space-y-3">
+                          <div className="flex items-center space-x-3">
+                            <XCircle className="w-5 h-5 text-gray-400" />
+                            <span className="text-sm text-gray-500">No signature uploaded</span>
+                          </div>
+                          <label className={`cursor-pointer inline-flex items-center px-4 py-2 border border-dashed border-gray-300 rounded-md text-sm font-medium text-gray-600 bg-white hover:bg-gray-50 hover:border-gray-400 ${uploadingSignature ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                            <Upload className="w-4 h-4 mr-2" />
+                            {uploadingSignature ? 'Uploading...' : 'Upload Signature Image'}
+                            <input
+                              type="file"
+                              accept="image/png,image/jpeg"
+                              className="hidden"
+                              onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (file) handleSignatureUpload(file);
+                              }}
+                              disabled={uploadingSignature}
+                            />
+                          </label>
+                          <p className="text-xs text-gray-400">PNG or JPG. Recommended: transparent background.</p>
+                        </div>
+                      )}
                     </div>
 
                     <div className="flex justify-end space-x-3 pt-4 border-t">
@@ -1140,6 +1264,40 @@ export function ManageDoctor() {
                         </div>
                       </div>
                     )}
+
+                    {/* Signature Status */}
+                    <div className="bg-white rounded-lg p-4 border border-gray-200">
+                      <div className="flex items-start space-x-3">
+                        <div className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center mt-1">
+                          <Image className="h-4 w-4 text-gray-600" />
+                        </div>
+                        <div className="flex-1">
+                          <label className="text-sm font-medium text-gray-500 mb-2 block">
+                            Digital Signature
+                          </label>
+                          {doctor.signature_url ? (
+                            <div className="space-y-3">
+                              <div className="flex items-center space-x-2">
+                                <CheckCircle className="w-4 h-4 text-green-500" />
+                                <span className="text-sm text-green-700 font-medium">Signature Added</span>
+                              </div>
+                              <div className="border rounded px-2 py-1 inline-block bg-white">
+                                <img
+                                  src={doctor.signature_url}
+                                  alt="Signature"
+                                  className="h-8 max-w-[100px] object-contain opacity-80"
+                                />
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="flex items-center space-x-2">
+                              <XCircle className="w-4 h-4 text-gray-400" />
+                              <span className="text-sm text-gray-500">No signature uploaded</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 )}
               </CardContent>
@@ -1372,8 +1530,8 @@ export function ManageDoctor() {
                             <Star
                               key={i}
                               className={`w-4 h-4 ${i < (review.patient_rating || 0)
-                                  ? "fill-amber-400 text-amber-400"
-                                  : "fill-gray-200 text-gray-200"
+                                ? "fill-amber-400 text-amber-400"
+                                : "fill-gray-200 text-gray-200"
                                 }`}
                             />
                           ))}
@@ -1633,6 +1791,6 @@ export function ManageDoctor() {
           </div>
         )}
       </div>
-    </div>
+    </div >
   );
 }

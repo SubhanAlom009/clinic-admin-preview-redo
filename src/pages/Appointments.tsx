@@ -560,11 +560,13 @@ export function Appointments() {
 
                             <td className="px-4 py-3 text-right">
                               <div className="flex items-center justify-end gap-1">
-                                {/* Video Call Link - Copy to clipboard */}
+                                {/* Video Call Link - Copy to clipboard (hide for completed/no-show) */}
                                 {appointment.appointment_type
                                   ?.toLowerCase()
                                   .includes("video") &&
-                                  (appointment as any).video_call_id && (
+                                  (appointment as any).video_call_id &&
+                                  appointment.status !== 'completed' &&
+                                  appointment.status !== 'no-show' && (
                                     <button
                                       onClick={(e) => {
                                         e.stopPropagation();

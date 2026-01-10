@@ -157,7 +157,7 @@ function DoctorDashboardLayout({ onLeave, callId, patientName, patientSymptoms, 
                 transform transition-transform duration-300 ease-in-out shadow-2xl
                 ${showSidebar ? "translate-x-0" : "translate-x-full"}
                 lg:relative lg:translate-x-0 lg:shadow-none lg:z-auto
-                ${showSidebar ? "lg:w-80 lg:opacity-100" : "lg:w-0 lg:opacity-0 lg:overflow-hidden lg:border-l-0"}
+                ${showSidebar ? "lg:w-[420px] lg:opacity-100" : "lg:w-0 lg:opacity-0 lg:overflow-hidden lg:border-l-0"}
             `}>
                 <div className="flex flex-col h-full">
                     {/* Close button for mobile */}
@@ -173,7 +173,6 @@ function DoctorDashboardLayout({ onLeave, callId, patientName, patientSymptoms, 
                         appointmentId={appointmentId}
                         patientName={patientName || "Unknown Patient"}
                         patientSymptoms={patientSymptoms || "Not provided"}
-                        callId={callId}
                         onComplete={onLeave}
                     />
                 </div>

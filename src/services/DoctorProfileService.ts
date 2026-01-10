@@ -40,6 +40,7 @@ export interface UpdateDoctorProfileData {
   consultation_fee?: number;
   languages?: string[]; // ✅ Changed from languages_spoken to match DB
   bio?: string;
+  signature_url?: string; // Doctor's signature image URL
 }
 
 export interface DoctorProfileWithClinic {
