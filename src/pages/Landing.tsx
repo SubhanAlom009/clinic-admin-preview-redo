@@ -112,12 +112,12 @@ export function Landing() {
     "Access your clinic data anywhere",
   ];
 
-  // Optional: gentler hero image rotation (fade)
+  // gentler hero image rotation (fade)
   const carouselImages = [
-    "/home_page_1.jpg",
-    "/home_page_2.jpg",
-    "/home_page_3.jpg",
-    "/home_page_4.jpg",
+    "/clinic-admin/home_page_1.jpg",
+    "/clinic-admin/home_page_2.jpg",
+    "/clinic-admin/home_page_3.jpg",
+    "/clinic-admin/home_page_4.jpg",
   ];
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   useEffect(() => {
@@ -202,8 +202,8 @@ export function Landing() {
                   onClick={() => setCurrentImageIndex(idx)}
                   aria-label={`Go to slide ${idx + 1}`}
                   className={`h-1.5 rounded-full transition-all ${idx === currentImageIndex
-                      ? "w-6 bg-blue-700"
-                      : "w-2 bg-slate-300 hover:bg-slate-400"
+                    ? "w-6 bg-blue-700"
+                    : "w-2 bg-slate-300 hover:bg-slate-400"
                     }`}
                 />
               ))}
