@@ -47,7 +47,7 @@ function HeaderHome() {
             {/* Logo */}
             <Link to="/" className="flex items-center space-x-3">
               <img
-                src="/abhicure_logo_nobg.png"
+                src="/clinic-admin/abhicure_logo_nobg.png"
                 alt="AbhiCure"
                 className="h-10 lg:h-12 w-auto object-contain"
               />

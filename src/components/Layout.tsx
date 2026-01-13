@@ -256,9 +256,8 @@ export function Layout() {
       >
         <div className="flex items-center justify-between h-16 px-4 border-b border-gray-200">
           <div
-            className={`flex items-center ${
-              sidebarCollapsed ? "justify-center" : "space-x-2"
-            }`}
+            className={`flex items-center ${sidebarCollapsed ? "justify-center" : "space-x-2"
+              }`}
           >
             <div className="w-8 h-8 rounded-md overflow-hidden bg-gray-100 flex items-center justify-center">
               {clinicLogoUrl ? (
@@ -319,18 +318,16 @@ export function Layout() {
                   to={item.to}
                   title={sidebarCollapsed ? item.label : undefined}
                   className={({ isActive }) =>
-                    `flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors duration-200 mx-3 ${
-                      isActive
-                        ? "bg-blue-50 text-blue-700"
-                        : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                    `flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors duration-200 mx-3 ${isActive
+                      ? "bg-blue-50 text-blue-700"
+                      : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
                     }`
                   }
                   onClick={() => setSidebarOpen(false)}
                 >
                   <item.icon
-                    className={`h-5 w-5 flex-shrink-0 ${
-                      sidebarCollapsed ? "" : "mr-3"
-                    }`}
+                    className={`h-5 w-5 flex-shrink-0 ${sidebarCollapsed ? "" : "mr-3"
+                      }`}
                   />
                   {!sidebarCollapsed && item.label}
                 </NavLink>
@@ -346,14 +343,12 @@ export function Layout() {
             className="flex items-center w-full px-4 py-4 text-sm font-medium text-red-600 hover:bg-red-50 transition-colors duration-200"
           >
             <div
-              className={`flex items-center ${
-                sidebarCollapsed ? "justify-center w-full" : ""
-              }`}
+              className={`flex items-center ${sidebarCollapsed ? "justify-center w-full" : ""
+                }`}
             >
               <LogOut
-                className={`h-5 w-5 flex-shrink-0 ${
-                  sidebarCollapsed ? "" : "mr-3"
-                }`}
+                className={`h-5 w-5 flex-shrink-0 ${sidebarCollapsed ? "" : "mr-3"
+                  }`}
               />
               {!sidebarCollapsed && "Sign Out"}
             </div>
@@ -376,7 +371,7 @@ export function Layout() {
               <div className="flex items-center space-x-3">
                 <div>
                   <img
-                    src="/abhicure_logo_nobg.png"
+                    src="/clinic-admin/abhicure_logo_nobg.png"
                     alt="AbhiCure Logo"
                     className="h-14 w-auto object-contain"
                   />
@@ -385,7 +380,7 @@ export function Layout() {
             </div>
 
             <div className="flex items-center space-x-4">
-              
+
               <AppointmentRequestsBadge
                 onBadgeClick={() => navigate("/admin/appointment-requests")}
                 className="mr-2"

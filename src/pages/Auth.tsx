@@ -26,10 +26,10 @@ export function Auth() {
   // Video playlist (memoized so reference is stable for hooks)
   const authVideos = useMemo(
     () => [
-      "/AuthVideos/291751_Talking_Receptionist_Clinic_Hospital_By_Frame_Stock_Footage_Artlist_HD.mp4",
-      "/AuthVideos/444021_Clinic_Sitting_Tablet_Doctor_By_Stockbusters_Artlist_HD.mp4",
-      "/AuthVideos/6520965_Spa_Rejuvenation_Therapy_Skin_Care_By_Nazarii_Ortynskyi_Artlist_HD.mp4",
-      "/AuthVideos/709493_Checkup_Radiography_Doctor_Patient_By_Yuki_Film_Artlist_HD.mp4",
+      "/clinic-admin/AuthVideos/291751_Talking_Receptionist_Clinic_Hospital_By_Frame_Stock_Footage_Artlist_HD.mp4",
+      "/clinic-admin/AuthVideos/444021_Clinic_Sitting_Tablet_Doctor_By_Stockbusters_Artlist_HD.mp4",
+      "/clinic-admin/AuthVideos/6520965_Spa_Rejuvenation_Therapy_Skin_Care_By_Nazarii_Ortynskyi_Artlist_HD.mp4",
+      "/clinic-admin/AuthVideos/709493_Checkup_Radiography_Doctor_Patient_By_Yuki_Film_Artlist_HD.mp4",
     ],
     []
   );
@@ -44,7 +44,7 @@ export function Auth() {
     v.src = authVideos[videoIndex];
     v.load();
     const p = v.play();
-    if (p && typeof p.catch === "function") p.catch(() => {});
+    if (p && typeof p.catch === "function") p.catch(() => { });
   }, [videoIndex, authVideos]);
 
   const advanceVideo = () => setVideoIndex((i) => (i + 1) % authVideos.length);
@@ -144,7 +144,7 @@ export function Auth() {
             muted
             playsInline
             preload="metadata"
-            poster="/home_page_1.jpg"
+            poster="/clinic-admin/home_page_1.jpg"
             onLoadedData={handleLoadedData}
             onEnded={advanceVideo}
             onError={advanceVideo}
@@ -156,7 +156,7 @@ export function Auth() {
         <div className="w-full bg-white p-8">
           <div className="flex flex-col items-center gap-2 mb-6">
             <img
-              src="/logo_abhicure.jpg"
+              src="/clinic-admin/logo_abhicure.jpg"
               alt="Abhicure logo"
               className="h-48 w-48 object-contain -mb-12"
             />
@@ -256,8 +256,8 @@ export function Auth() {
               {loading
                 ? "Please wait..."
                 : isSignUp
-                ? "Create Account"
-                : "Sign In"}
+                  ? "Create Account"
+                  : "Sign In"}
             </Button>
 
             <div className="text-center mt-2">

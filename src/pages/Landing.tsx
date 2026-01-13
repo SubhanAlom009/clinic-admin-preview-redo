@@ -189,9 +189,8 @@ export function Landing() {
                   key={idx}
                   src={src}
                   alt={`Healthcare scene ${idx + 1}`}
-                  className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-700 ${
-                    idx === currentImageIndex ? "opacity-100" : "opacity-0"
-                  }`}
+                  className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-700 ${idx === currentImageIndex ? "opacity-100" : "opacity-0"
+                    }`}
                 />
               ))}
             </div>
@@ -202,11 +201,10 @@ export function Landing() {
                   key={idx}
                   onClick={() => setCurrentImageIndex(idx)}
                   aria-label={`Go to slide ${idx + 1}`}
-                  className={`h-1.5 rounded-full transition-all ${
-                    idx === currentImageIndex
+                  className={`h-1.5 rounded-full transition-all ${idx === currentImageIndex
                       ? "w-6 bg-blue-700"
                       : "w-2 bg-slate-300 hover:bg-slate-400"
-                  }`}
+                    }`}
                 />
               ))}
             </div>
@@ -424,7 +422,7 @@ export function Landing() {
             {/* About */}
             <div className="col-span-1 md:col-span-2 lg:col-span-1">
               <img
-                src="/abhicure_logo_nobg.png"
+                src="/clinic-admin/abhicure_logo_nobg.png"
                 alt="AbhiCure Logo"
                 className="h-10 w-auto bg-white p-1.5 rounded mb-4"
               />
