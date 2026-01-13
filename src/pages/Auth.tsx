@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useMemo } from "react";
+import { useState } from "react";
 import { Navigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
 import {
@@ -23,45 +23,7 @@ export function Auth() {
   const [showPassword, setShowPassword] = useState(false);
   const { user, signIn, signUp } = useAuth();
 
-  // Video playlist (memoized so reference is stable for hooks)
-  const authVideos = useMemo(
-    () => [
-      "/clinic-admin/AuthVideos/291751_Talking_Receptionist_Clinic_Hospital_By_Frame_Stock_Footage_Artlist_HD.mp4",
-      "/clinic-admin/AuthVideos/444021_Clinic_Sitting_Tablet_Doctor_By_Stockbusters_Artlist_HD.mp4",
-      "/clinic-admin/AuthVideos/6520965_Spa_Rejuvenation_Therapy_Skin_Care_By_Nazarii_Ortynskyi_Artlist_HD.mp4",
-      "/clinic-admin/AuthVideos/709493_Checkup_Radiography_Doctor_Patient_By_Yuki_Film_Artlist_HD.mp4",
-    ],
-    []
-  );
 
-  const videoRef = useRef<HTMLVideoElement | null>(null);
-  const [videoIndex, setVideoIndex] = useState(0);
-  const initialPosterRemovedRef = useRef(false);
-
-  useEffect(() => {
-    const v = videoRef.current;
-    if (!v) return;
-    v.src = authVideos[videoIndex];
-    v.load();
-    const p = v.play();
-    if (p && typeof p.catch === "function") p.catch(() => { });
-  }, [videoIndex, authVideos]);
-
-  const advanceVideo = () => setVideoIndex((i) => (i + 1) % authVideos.length);
-
-  const handleLoadedData = () => {
-    // remove the poster attribute after the first successful load so browsers
-    // don't show it between subsequent video switches
-    const v = videoRef.current;
-    if (v && !initialPosterRemovedRef.current) {
-      try {
-        v.removeAttribute("poster");
-      } catch {
-        /* ignore */
-      }
-      initialPosterRemovedRef.current = true;
-    }
-  };
 
   if (user) {
     return <Navigate to="/admin/dashboard" replace />;
@@ -137,17 +99,10 @@ export function Auth() {
       {/* Left visual (70%) - will stay fixed on large screens */}
       <div className="hidden lg:block w-8/12 sticky top-0 h-screen">
         <div className="relative h-full">
-          <video
-            ref={videoRef}
+          <img
+            src="/clinic-admin/home_page_1.jpg"
+            alt="Healthcare"
             className="absolute inset-0 w-full h-full object-cover"
-            autoPlay
-            muted
-            playsInline
-            preload="metadata"
-            poster="/clinic-admin/home_page_1.jpg"
-            onLoadedData={handleLoadedData}
-            onEnded={advanceVideo}
-            onError={advanceVideo}
           />
         </div>
       </div>
