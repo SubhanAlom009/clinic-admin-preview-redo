@@ -5,6 +5,22 @@
       "destination": "/assets/:path*"
     },
     {
+      "source": "/clinic-admin/:file.jpg",
+      "destination": "/:file.jpg"
+    },
+    {
+      "source": "/clinic-admin/:file.png",
+      "destination": "/:file.png"
+    },
+    {
+      "source": "/clinic-admin/:file.svg",
+      "destination": "/:file.svg"
+    },
+    {
+      "source": "/clinic-admin/AuthVideos/:path*",
+      "destination": "/AuthVideos/:path*"
+    },
+    {
       "source": "/clinic-admin/:path*",
       "destination": "/index.html"
     },
