@@ -1,7 +1,15 @@
 {
   "rewrites": [
     {
-      "source": "/((?!clinic-admin/).*)",
+      "source": "/clinic-admin/assets/:path*",
+      "destination": "/assets/:path*"
+    },
+    {
+      "source": "/clinic-admin/:path*",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/:path*",
       "destination": "/index.html"
     }
   ]
