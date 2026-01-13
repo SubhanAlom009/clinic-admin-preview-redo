@@ -1,11 +1,7 @@
 {
   "rewrites": [
     {
-      "source": "/clinic-admin/(.*)",
-      "destination": "/index.html"
-    },
-    {
-      "source": "/clinic-admin",
+      "source": "/((?!clinic-admin/).*)",
       "destination": "/index.html"
     }
   ]
