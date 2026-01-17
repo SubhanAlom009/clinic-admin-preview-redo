@@ -2,11 +2,9 @@
  * Slot Selector Component
  * Displays available slots for selection
  */
-import React, { useState, useEffect } from "react";
-import { Calendar, Clock, Users, AlertCircle, Loader2 } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Calendar, AlertCircle, Loader2 } from "lucide-react";
 import { Button } from "../ui/Button";
-import { Card, CardContent } from "../ui/Card";
-import { Badge } from "../ui/Badge";
 import {
   DoctorSlotService,
   AvailableSlot,
@@ -72,36 +70,6 @@ export function SlotSelector({
     }
   };
 
-  const getSlotStatus = (slot: AvailableSlot) => {
-    if (slot.is_full) {
-      return { status: "full", color: "destructive" as const, text: "Full" };
-    } else if (slot.available_capacity <= 2) {
-      return {
-        status: "nearly-full",
-        color: "warning" as const,
-        text: "Nearly Full",
-      };
-    } else {
-      return {
-        status: "available",
-        color: "success" as const,
-        text: "Available",
-      };
-    }
-  };
-
-  const formatTimeRange = (startTime: string, endTime: string) => {
-    const formatTime = (time: string) => {
-      const [hours, minutes] = time.split(":");
-      const hour = parseInt(hours);
-      const ampm = hour >= 12 ? "PM" : "AM";
-      const displayHour = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
-      return `${displayHour}:${minutes} ${ampm}`;
-    };
-
-    return `${formatTime(startTime)} - ${formatTime(endTime)}`;
-  };
-
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -146,108 +114,86 @@ export function SlotSelector({
     );
   }
 
-  return (
-    <div className="space-y-4">
-      <div className="flex justify-between items-center">
-        <h3 className="text-lg font-semibold text-gray-900">
-          Available Time Slots
-        </h3>
-        <p className="text-sm text-gray-600">
-          {new Date(date).toLocaleDateString()}
-        </p>
-      </div>
+  // Group slots by time of day
+  const groupSlotsByTimeOfDay = () => {
+    const morning: AvailableSlot[] = [];
+    const afternoon: AvailableSlot[] = [];
+    const evening: AvailableSlot[] = [];
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {slots.map((slot) => {
-          const slotStatus = getSlotStatus(slot);
-          const isSelected = selectedSlot === slot.id;
-          const isDisabled = disabled || slot.is_full;
+    slots.forEach((slot) => {
+      const hour = parseInt(slot.start_time.split(":")[0]);
+      if (hour < 12) morning.push(slot);
+      else if (hour < 17) afternoon.push(slot);
+      else evening.push(slot);
+    });
 
-          return (
-            <Card
-              key={slot.id}
-              className={`cursor-pointer transition-all duration-200 ${isSelected
-                ? "ring-2 ring-blue-500 bg-blue-50 border-blue-200"
-                : isDisabled
-                  ? "opacity-50 cursor-not-allowed"
-                  : "hover:shadow-md hover:border-gray-300"
-                }`}
-              onClick={() => {
-                console.log("🎯 Card clicked for slot:", slot.slot_name);
-                handleSlotSelect(slot);
-              }}
-            >
-              <CardContent className="p-4">
-                <div className="flex justify-between items-start mb-3">
-                  <h4 className="font-semibold text-gray-900">
-                    {slot.slot_name}
-                  </h4>
-                  <Badge variant={slotStatus.color} className="text-xs">
-                    {slotStatus.text}
-                  </Badge>
-                </div>
+    return { morning, afternoon, evening };
+  };
 
-                <div className="space-y-2">
-                  <div className="flex items-center text-sm text-gray-600">
-                    <Clock className="h-4 w-4 mr-2 flex-shrink-0" />
-                    <span>
-                      {formatTimeRange(slot.start_time, slot.end_time)}
-                    </span>
-                  </div>
+  const groupedSlots = groupSlotsByTimeOfDay();
 
-                  <div className="flex items-center text-sm text-gray-600">
-                    <Users className="h-4 w-4 mr-2 flex-shrink-0" />
-                    <span>
-                      {slot.available_capacity} / {slot.max_capacity} available
-                    </span>
-                  </div>
-                </div>
+  const formatTime = (time: string) => {
+    const [hours, minutes] = time.split(":");
+    const hour = parseInt(hours);
+    const ampm = hour >= 12 ? "PM" : "AM";
+    const displayHour = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
+    return `${displayHour}:${minutes} ${ampm}`;
+  };
 
-                {!isDisabled && (
-                  <div className="mt-4">
-                    <Button
-                      type="button"
-                      size="sm"
-                      className="w-full"
-                      variant={isSelected ? "primary" : "outline"}
-                      disabled={isDisabled}
-                      onClick={() => {
-                        console.log(
-                          "🔘 Button clicked for slot:",
-                          slot.slot_name
-                        );
-                        handleSlotSelect(slot);
-                      }}
-                    >
-                      {isSelected ? "Selected" : "Select Slot"}
-                    </Button>
-                  </div>
-                )}
+  const renderSlotGroup = (title: string, slotsGroup: AvailableSlot[]) => {
+    if (slotsGroup.length === 0) return null;
 
-                {slot.available_capacity > 0 &&
-                  slot.available_capacity <= 2 &&
-                  !slot.is_full && (
-                    <div className="mt-2">
-                      <p className="text-xs text-amber-600 font-medium">
-                        ⚠️ Only {slot.available_capacity} spot
-                        {slot.available_capacity !== 1 ? "s" : ""} left
-                      </p>
-                    </div>
-                  )}
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
+    return (
+      <div className="mb-4">
+        <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">
+          {title}
+        </h4>
+        <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+          {slotsGroup.map((slot) => {
+            const isSelected = selectedSlot === slot.id;
+            const isDisabled = disabled || slot.is_full;
+            const isNearlyFull = slot.available_capacity <= 2 && !slot.is_full;
 
-      {slots.length > 0 && (
-        <div className="text-center pt-4 border-t">
-          <p className="text-sm text-gray-500">
-            Showing {slots.length} slot{slots.length !== 1 ? "s" : ""} for{" "}
-            {new Date(date).toLocaleDateString()}
-          </p>
+            return (
+              <button
+                key={slot.id}
+                type="button"
+                onClick={() => !isDisabled && handleSlotSelect(slot)}
+                disabled={isDisabled}
+                className={`py-2.5 px-2 rounded-lg text-sm font-medium transition-all border ${isSelected
+                  ? "bg-blue-600 text-white border-blue-600 shadow-md ring-2 ring-blue-100"
+                  : isDisabled
+                    ? "bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed"
+                    : isNearlyFull
+                      ? "bg-amber-50 text-amber-700 border-amber-200 hover:border-amber-300"
+                      : "bg-white text-gray-700 border-gray-200 hover:border-blue-300 hover:bg-blue-50"
+                  }`}
+              >
+                {formatTime(slot.start_time)}
+              </button>
+            );
+          })}
         </div>
-      )}
+      </div>
+    );
+  };
+
+  return (
+    <div className="space-y-2">
+      <div className="bg-white p-4 rounded-lg border border-gray-200">
+        {renderSlotGroup("Morning", groupedSlots.morning)}
+        {renderSlotGroup("Afternoon", groupedSlots.afternoon)}
+        {renderSlotGroup("Evening", groupedSlots.evening)}
+
+        {selectedSlot && (
+          <div className="mt-3 pt-3 border-t border-gray-100">
+            <p className="text-xs text-green-600 font-medium flex items-center">
+              <span className="w-2 h-2 bg-green-500 rounded-full mr-2"></span>
+              Slot selected
+            </p>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

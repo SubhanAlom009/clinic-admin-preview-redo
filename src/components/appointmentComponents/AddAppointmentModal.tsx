@@ -11,7 +11,6 @@ import {
 } from "../../validation/FormSchemas";
 import { AppointmentService } from "../../services/AppointmentService";
 import {
-  combineLocalDateTimeToIso,
   getAppointmentIntervalMinutes,
 } from "../../lib/utils";
 import { SlotSelector } from "../doctorComponents/SlotSelector";
@@ -32,7 +31,7 @@ export function AddAppointmentModal({
     clinic_doctor_id: "",
     doctor_slot_id: "", // CHANGED: Now using slot selection
     appointment_datetime: "", // CHANGED: Will be derived from slot
-    appointment_type: "Consultation",
+    appointment_type: "In-Clinic",
     notes: "",
     symptoms: "",
   });
@@ -299,7 +298,7 @@ export function AddAppointmentModal({
         clinic_doctor_id: "",
         doctor_slot_id: "", // CHANGED: Added slot field
         appointment_datetime: "", // CHANGED: Now optional, derived from slot
-        appointment_type: "Consultation",
+        appointment_type: "In-Clinic Consultation",
         notes: "",
         symptoms: "",
       });
@@ -425,11 +424,10 @@ export function AddAppointmentModal({
                 value={formData.clinic_patient_id}
                 onChange={handleInputChange}
                 onBlur={() => handleFieldBlur("clinic_patient_id")}
-                className={`w-full border rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                  errors.clinic_patient_id
-                    ? "border-red-300 focus:ring-red-500"
-                    : "border-gray-300"
-                }`}
+                className={`w-full border rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.clinic_patient_id
+                  ? "border-red-300 focus:ring-red-500"
+                  : "border-gray-300"
+                  }`}
                 required
               >
                 <option value="">Select a patient</option>
@@ -461,11 +459,10 @@ export function AddAppointmentModal({
                 value={formData.clinic_doctor_id}
                 onChange={handleInputChange}
                 onBlur={() => handleFieldBlur("clinic_doctor_id")}
-                className={`w-full border rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                  errors.clinic_doctor_id
-                    ? "border-red-300 focus:ring-red-500"
-                    : "border-gray-300"
-                }`}
+                className={`w-full border rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.clinic_doctor_id
+                  ? "border-red-300 focus:ring-red-500"
+                  : "border-gray-300"
+                  }`}
                 required
               >
                 <option value="">Select a doctor</option>
@@ -524,31 +521,33 @@ export function AddAppointmentModal({
               </div>
             )}
 
+            {/* Visit Type Toggle - Matches Patient Webapp */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Appointment Type
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Visit Type
               </label>
-              <select
-                name="appointment_type"
-                value={formData.appointment_type}
-                onChange={handleInputChange}
-                onBlur={() => handleFieldBlur("appointment_type")}
-                className={`w-full border rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                  errors.appointment_type
-                    ? "border-red-300 focus:ring-red-500"
-                    : "border-gray-300"
-                }`}
-              >
-                <option value="Consultation">Consultation</option>
-                <option value="Follow-up">Follow-up</option>
-                <option value="Emergency">Emergency</option>
-                <option value="Routine Checkup">Routine Checkup</option>
-                <option value="Specialist Consultation">
-                  Specialist Consultation
-                </option>
-                <option value="Procedure">Procedure</option>
-                <option value="Surgery">Surgery</option>
-              </select>
+              <div className="flex bg-gray-100 p-1 rounded-lg w-fit">
+                <button
+                  type="button"
+                  onClick={() => setFormData({ ...formData, appointment_type: "In-Clinic Consultation" })}
+                  className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${formData.appointment_type === "In-Clinic Consultation"
+                    ? "bg-white text-blue-600 shadow-sm"
+                    : "text-gray-500 hover:text-gray-700"
+                    }`}
+                >
+                  First Visit
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFormData({ ...formData, appointment_type: "In-Clinic Follow-up" })}
+                  className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${formData.appointment_type === "In-Clinic Follow-up"
+                    ? "bg-white text-blue-600 shadow-sm"
+                    : "text-gray-500 hover:text-gray-700"
+                    }`}
+                >
+                  Follow-up
+                </button>
+              </div>
               {errors.appointment_type && (
                 <p className="mt-1 text-sm text-red-600">
                   {errors.appointment_type}
@@ -557,9 +556,10 @@ export function AddAppointmentModal({
             </div>
           </div>
 
+          {/* Reason for Visit - Single field replacing Symptoms + Notes */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Symptoms
+              Reason for Visit <span className="text-gray-400 font-normal">(Optional)</span>
             </label>
             <textarea
               name="symptoms"
@@ -567,40 +567,14 @@ export function AddAppointmentModal({
               onChange={handleInputChange}
               onBlur={() => handleFieldBlur("symptoms")}
               rows={3}
-              className={`w-full border rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                errors.symptoms
-                  ? "border-red-300 focus:ring-red-500"
-                  : "border-gray-300"
-              }`}
-              placeholder="Describe the patient's symptoms (e.g., fever, headache, cough)"
+              className={`w-full border rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.symptoms
+                ? "border-red-300 focus:ring-red-500"
+                : "border-gray-300"
+                }`}
+              placeholder="Briefly describe symptoms or reason for visiting..."
             />
             {errors.symptoms && (
               <p className="mt-1 text-sm text-red-600">{errors.symptoms}</p>
-            )}
-            <p className="text-xs text-gray-500 mt-1">
-              This helps the doctor prepare for the consultation
-            </p>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Additional Notes
-            </label>
-            <textarea
-              name="notes"
-              value={formData.notes}
-              onChange={handleInputChange}
-              onBlur={() => handleFieldBlur("notes")}
-              rows={3}
-              className={`w-full border rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                errors.notes
-                  ? "border-red-300 focus:ring-red-500"
-                  : "border-gray-300"
-              }`}
-              placeholder="Add any appointment notes or special instructions"
-            />
-            {errors.notes && (
-              <p className="mt-1 text-sm text-red-600">{errors.notes}</p>
             )}
           </div>
 

@@ -22,6 +22,8 @@ export interface CreateDoctorProfileData {
   consultation_fee?: number;
   languages?: string[]; // ✅ Changed from languages_spoken to match DB
   bio?: string;
+  date_of_birth?: string; // ✅ Added for DOB
+  gender?: 'male' | 'female' | 'other'; // ✅ Added for gender
   // Slot settings
   default_slot_duration?: number;
   max_patients_per_slot?: number;
@@ -41,6 +43,8 @@ export interface UpdateDoctorProfileData {
   languages?: string[]; // ✅ Changed from languages_spoken to match DB
   bio?: string;
   signature_url?: string; // Doctor's signature image URL
+  date_of_birth?: string; // ✅ Added for DOB
+  gender?: 'male' | 'female' | 'other'; // ✅ Added for gender
 }
 
 export interface DoctorProfileWithClinic {
@@ -147,6 +151,8 @@ export class DoctorProfileService extends BaseService {
           consultation_fee: profileData.consultation_fee,
           languages: profileData.languages, // ✅ Fixed field name
           bio: profileData.bio,
+          date_of_birth: profileData.date_of_birth, // ✅ Added DOB
+          gender: profileData.gender, // ✅ Added gender
           created_by: user.id, // ✅ Add created_by for RLS
         } as any)
         .select()

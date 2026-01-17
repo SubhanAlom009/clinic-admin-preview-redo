@@ -38,6 +38,8 @@ export function EditDoctorModal({
     secondary_specializations: "",
     languages: "",
     bio: "",
+    date_of_birth: "",
+    gender: undefined,
     // Slot settings
     default_slot_duration: "180",
     max_patients_per_slot: "10",
@@ -85,6 +87,8 @@ export function EditDoctorModal({
           ? doctor.languages.join(", ")
           : doctor.languages || "",
         bio: doctor.bio || "",
+        date_of_birth: (doctor as any).date_of_birth || "",
+        gender: (doctor as any).gender || undefined,
         // Slot settings from clinic_doctor relationship
         default_slot_duration: doctor.clinic_doctor?.default_slot_duration?.toString() || "180",
         max_patients_per_slot: doctor.clinic_doctor?.max_patients_per_slot?.toString() || "10",
@@ -104,6 +108,8 @@ export function EditDoctorModal({
         secondary_specializations: "",
         languages: "",
         bio: "",
+        date_of_birth: "",
+        gender: undefined,
         default_slot_duration: "180",
         max_patients_per_slot: "10",
         slot_creation_enabled: true,
@@ -150,6 +156,8 @@ export function EditDoctorModal({
           ? formData.languages.split(",").map((l) => l.trim())
           : undefined,
         bio: formData.bio || undefined,
+        date_of_birth: formData.date_of_birth || undefined,
+        gender: formData.gender || undefined,
       };
 
       // ✅ Use correct service method
@@ -332,6 +340,37 @@ export function EditDoctorModal({
             error={errors.email}
             placeholder="Enter email address"
           />
+          <Input
+            label="Date of Birth"
+            name="date_of_birth"
+            type="date"
+            value={formData.date_of_birth}
+            onChange={handleInputChange}
+            onBlur={() => handleFieldBlur("date_of_birth")}
+            error={errors.date_of_birth}
+          />
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Gender
+            </label>
+            <select
+              name="gender"
+              value={formData.gender || ""}
+              onChange={(e) => {
+                const value = e.target.value as "male" | "female" | "other" | "";
+                setFormData({
+                  ...formData,
+                  gender: value || undefined,
+                });
+              }}
+              className="block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+            >
+              <option value="">Select gender</option>
+              <option value="male">Male</option>
+              <option value="female">Female</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
           <Input
             label="Consultation Fee (₹)"
             name="consultation_fee"
