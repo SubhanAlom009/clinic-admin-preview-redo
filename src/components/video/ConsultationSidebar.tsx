@@ -1,9 +1,11 @@
 import { useState, useEffect, useRef } from "react";
-import { FileText, Pill, Stethoscope, CheckCircle, Loader2, Save, Upload, File, X, Plus, Trash2, User, AlertTriangle, Activity, FileDown } from "lucide-react";
+import { FileText, Pill, Stethoscope, CheckCircle, Loader2, Save, Upload, File, X, Plus, Trash2, User, AlertTriangle, Activity, FileDown, Mic, MicOff, Wand2 } from "lucide-react";
 import { AppointmentStatus } from "../../constants";
 import { supabase } from "../../lib/supabase";
 import { toast } from "sonner";
 import { downloadPrescriptionPDF, generatePrescriptionPDF } from "../../utils/generatePrescriptionPDF";
+import { useWebSpeech } from "../../hooks/useWebSpeech";
+import { AIService, GeneratedPrescription } from "../../services/aiService";
 
 interface ConsultationSidebarProps {
     appointmentId?: string;
@@ -75,6 +77,65 @@ export function ConsultationSidebar({
     const [clinicInfo, setClinicInfo] = useState<ClinicInfo | null>(null);
     const [doctorInfo, setDoctorInfo] = useState<DoctorInfo | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
+
+    // AI Assist States & Hooks
+    const { isListening, transcript, warning, startListening, stopListening, isSupported } = useWebSpeech();
+    const [isGeneratingAI, setIsGeneratingAI] = useState(false);
+    const [aiResult, setAiResult] = useState<GeneratedPrescription | null>(null);
+
+    const handleGenerateAiPrescription = async () => {
+        if (!transcript.trim()) {
+            toast.error("No transcription available. Please record speech first.");
+            return;
+        }
+
+        setIsGeneratingAI(true);
+        try {
+            const results = await AIService.generatePrescriptionFromTranscript(transcript);
+            setAiResult(results);
+            toast.success("AI extraction complete! Ready to populate fields.");
+        } catch (err: any) {
+            console.error("AI Generation Error", err);
+            toast.error(err.message || "Failed to generate prescription from AI.");
+        } finally {
+            setIsGeneratingAI(false);
+        }
+    };
+
+    const handlePopulateFields = () => {
+        if (!aiResult) return;
+
+        // Helper: reject placeholder/empty AI outputs
+        const isUsable = (val: string | undefined | null): boolean => {
+            if (!val) return false;
+            const lower = val.trim().toLowerCase();
+            return lower !== "" && lower !== "none" && lower !== "none detected" && lower !== "n/a" && lower !== "not mentioned" && lower !== "not specified";
+        };
+
+        if (isUsable(aiResult.symptoms)) {
+            setSymptoms(prev => (prev ? prev + "\n" + aiResult.symptoms : aiResult.symptoms));
+        }
+        if (isUsable(aiResult.diagnosis)) {
+            setDiagnosis(aiResult.diagnosis);
+        }
+        if (aiResult.medicines && aiResult.medicines.length > 0) {
+            // Only add medicines that have a usable name
+            const validMeds = aiResult.medicines.filter(m => isUsable(m.name));
+            if (validMeds.length > 0) {
+                const newMeds = validMeds.map(med => ({
+                    id: `med-${Date.now()}-${Math.random()}`,
+                    name: med.name,
+                    dosage: med.dosage
+                }));
+                setMedicines(prev => [...prev, ...newMeds]);
+            }
+        }
+
+        setHasUnsavedChanges(true);
+        setAiResult(null); // clear the pending result so doc knows it was applied
+        toast.success("Fields populated successfully!");
+    };
+
 
     const calculateAge = (dob: string | null): string => {
         if (!dob) return "N/A";
@@ -540,6 +601,103 @@ export function ConsultationSidebar({
             <div className="flex-1 overflow-y-auto" style={{ scrollbarWidth: 'none' }}>
                 {activeTab === "clinical" ? (
                     <div className="p-4 space-y-4">
+                        
+                        {/* --- AI Assist Section --- */}
+                        {isSupported && (
+                            <div className="bg-gray-800/80 rounded-xl border border-teal-500/30 overflow-hidden relative shadow-lg">
+                                {/* Decorative Gradient Overlay */}
+                                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-teal-400 via-purple-500 to-pink-500"></div>
+                                
+                                <div className="p-4">
+                                    <div className="flex items-center justify-between mb-3">
+                                        <div className="flex items-center gap-2">
+                                            <Wand2 className="w-4 h-4 text-teal-400" />
+                                            <h3 className="text-sm font-bold text-white tracking-wide uppercase">AI Auto-Prescription</h3>
+                                        </div>
+                                        <div className="px-2 py-0.5 rounded text-[10px] font-bold bg-teal-500/20 text-teal-400 border border-teal-500/30">
+                                            AI
+                                        </div>
+                                    </div>
+                                    
+                                    <p className="text-xs text-gray-400 mb-4">
+                                        Turn on listening during consultation to automatically extract symptoms, diagnosis, and medicines.
+                                    </p>
+
+                                    {/* Transcript Box */}
+                                    {transcript.trim() && (
+                                        <div 
+                                            className="bg-gray-900 rounded p-3 mb-4 text-xs text-gray-300 italic max-h-40 overflow-y-auto border border-gray-700"
+                                            style={{ scrollbarWidth: 'thin', scrollbarColor: '#4b5563 transparent' }}
+                                        >
+                                            "{transcript}"
+                                        </div>
+                                    )}
+
+                                    {/* AI Results Staged for Population */}
+                                    {aiResult && (
+                                        <div className="mb-4 p-3 bg-teal-900/20 rounded-lg border border-teal-500/20">
+                                            <h4 className="text-xs font-semibold text-teal-400 mb-2">Ready to Populate:</h4>
+                                            <ul className="text-xs text-gray-300 space-y-1 mb-3">
+                                                <li><span className="text-gray-500">Symptoms:</span> {aiResult.symptoms || "None detected"}</li>
+                                                <li><span className="text-gray-500">Diagnosis:</span> {aiResult.diagnosis || "None detected"}</li>
+                                                <li><span className="text-gray-500">Medicines:</span> {aiResult.medicines.length > 0 ? aiResult.medicines.map(m => m.name).join(", ") : "None detected"}</li>
+                                            </ul>
+                                            <button
+                                                onClick={handlePopulateFields}
+                                                className="w-full py-2 bg-gradient-to-r from-teal-500 to-teal-400 hover:from-teal-400 hover:to-teal-300 text-gray-900 font-bold text-xs rounded shadow-lg shadow-teal-500/20 transition-all"
+                                            >
+                                                Populate Data Fields Below
+                                            </button>
+                                        </div>
+                                    )}
+
+                                    {/* Action Buttons */}
+                                    <div className="flex gap-2">
+                                        <button
+                                            onClick={isListening ? stopListening : startListening}
+                                            className={[
+                                                "flex-1 py-2 px-3 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all",
+                                                isListening 
+                                                ? "bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/30" 
+                                                : "bg-gray-700 hover:bg-gray-600 text-white border border-transparent"
+                                            ].join(" ")}
+                                        >
+                                            {isListening ? (
+                                                <><MicOff className="w-3.5 h-3.5 animate-pulse" /> Stop Listening</>
+                                            ) : (
+                                                <><Mic className="w-3.5 h-3.5" /> Start Listening</>
+                                            )}
+                                        </button>
+                                        
+                                        <button
+                                            onClick={handleGenerateAiPrescription}
+                                            disabled={isGeneratingAI || !transcript.trim() || isListening}
+                                            className={[
+                                                "flex-1 py-2 px-3 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all",
+                                                (!transcript.trim() || isListening) 
+                                                ? "bg-gray-800 text-gray-500 border border-gray-700 cursor-not-allowed" 
+                                                : "bg-purple-600 hover:bg-purple-500 text-white shadow shadow-purple-500/20 border border-purple-500"
+                                            ].join(" ")}
+                                        >
+                                            {isGeneratingAI ? (
+                                                <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Processing...</>
+                                            ) : (
+                                                "Extract Info"
+                                            )}
+                                        </button>
+                                    </div>
+
+                                    {/* No-speech warning */}
+                                    {warning && isListening && (
+                                        <p className="mt-2 text-[11px] text-amber-400/80 animate-pulse text-center">
+                                            ⚠ {warning}
+                                        </p>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+                        {/* --- End AI Assist Section --- */}
+
                         {/* Symptoms Section */}
                         <div>
                             <label className="text-xs font-bold text-gray-500 uppercase mb-2 block">Symptoms Found</label>
